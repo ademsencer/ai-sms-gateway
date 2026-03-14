@@ -102,7 +102,9 @@
       "Bash(gh repo:*)",
       "Bash(chmod +x /Users/ademsencer/Projects/ai/sms-gateway/apps/android-client/build-apk.sh)",
       "Bash(openssl rand:*)",
-      "Bash(gh secret:*)"
+      "Bash(gh secret:*)",
+      "Bash(git push:*)",
+      "Bash(gh run:*)"
     ]
   }
 }

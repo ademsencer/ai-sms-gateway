@@ -37,7 +37,7 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
 
   async publish(exchange: string, routingKey: string, message: Record<string, unknown>): Promise<void> {
     await this.channelWrapper.publish(exchange, routingKey, Buffer.from(JSON.stringify(message)), {
-      deliveryMode: 2,
+      persistent: true,
       contentType: 'application/json',
       timestamp: Math.floor(Date.now() / 1000),
     });
