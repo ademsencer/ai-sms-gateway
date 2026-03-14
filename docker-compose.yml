@@ -84,7 +84,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_KEY_PREFIX="smsgw:"
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-smsgateway}:${RABBITMQ_PASSWORD:-smsgateway_password}@rabbitmq:5672
-      - CORS_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173
+      - CORS_ORIGINS=http://localhost,http://localhost:5173,http://213.32.89.237:5173,http://213.32.89.237
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-smsgw-access-secret-change-in-production}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-smsgw-refresh-secret-change-in-production}
       - JWT_ACCESS_EXPIRES=${JWT_ACCESS_EXPIRES:-15m}
@@ -186,7 +186,7 @@ services:
     container_name: smsgw-nginx
     restart: unless-stopped
     ports:
-      - '${NGINX_PORT:-8080}:80'
+      - '${NGINX_PORT:-5173}:80'
     depends_on:
       - api-gateway
       - dashboard

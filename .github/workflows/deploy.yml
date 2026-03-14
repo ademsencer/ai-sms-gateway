@@ -19,13 +19,14 @@ jobs:
 
             DEPLOY_DIR="/opt/sms-gateway"
 
-            # First deploy: clone
+            # First deploy: clone (private repo needs token)
             if [ ! -d "$DEPLOY_DIR" ]; then
-              git clone https://github.com/${{ github.repository }}.git "$DEPLOY_DIR"
+              git clone https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git "$DEPLOY_DIR"
               cd "$DEPLOY_DIR"
               cp .env.example .env
             else
               cd "$DEPLOY_DIR"
+              git remote set-url origin https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
               git fetch origin main
               git reset --hard origin/main
             fi

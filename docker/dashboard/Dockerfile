@@ -3,7 +3,7 @@ RUN corepack enable pnpm
 WORKDIR /app
 
 FROM base AS builder
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* tsconfig.base.json ./
 COPY packages/ ./packages/
 COPY apps/dashboard/ ./apps/dashboard/
 RUN pnpm install --frozen-lockfile || pnpm install
