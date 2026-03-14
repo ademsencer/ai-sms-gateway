@@ -1,0 +1,27 @@
+{
+  "name": "sms-gateway-enterprise",
+  "version": "1.0.0",
+  "description": "Enterprise Android SMS Gateway Platform — event-driven microservice architecture",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:gateway": "pnpm --filter api-gateway start:dev",
+    "dev:sms-worker": "pnpm --filter sms-worker start:dev",
+    "dev:telegram-worker": "pnpm --filter telegram-worker start:dev",
+    "dev:device-monitor": "pnpm --filter device-monitor-worker start:dev",
+    "dev:dashboard": "pnpm --filter dashboard dev",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "prisma:generate": "pnpm --filter api-gateway prisma:generate",
+    "prisma:migrate": "pnpm --filter api-gateway prisma:migrate",
+    "prisma:seed": "pnpm --filter api-gateway prisma:seed",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r exec rimraf dist node_modules"
+  }
+}

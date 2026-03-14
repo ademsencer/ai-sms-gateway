@@ -1,0 +1,38 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api-gateway",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "api-gateway", "start:dev"],
+      "port": 3000
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "dashboard", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "sms-worker",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "sms-worker", "start:dev"],
+      "port": 3001,
+      "autoPort": true
+    },
+    {
+      "name": "telegram-worker",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "telegram-worker", "start:dev"],
+      "port": 3002,
+      "autoPort": true
+    },
+    {
+      "name": "device-monitor",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "device-monitor-worker", "start:dev"],
+      "port": 3003,
+      "autoPort": true
+    }
+  ]
+}

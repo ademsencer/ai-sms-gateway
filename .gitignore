@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+
+# Android
+apps/android-client/.gradle/
+apps/android-client/app/build/
+apps/android-client/build/
+apps/android-client/local.properties
+*.apk
+*.aab
+
+# Docker volumes
+docker/mysql/data/
+docker/redis/data/

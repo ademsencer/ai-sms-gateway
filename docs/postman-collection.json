@@ -1,0 +1,93 @@
+{
+  "info": {
+    "name": "SMS Gateway Platform",
+    "description": "Enterprise Android SMS Gateway API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "deviceKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "Register Device",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/device/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"device_001\",\n  \"name\": \"My Android Phone\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Devices",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/device/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SMS",
+      "item": [
+        {
+          "name": "Ingest SMS",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/sms",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-device-key", "value": "{{deviceKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"device_001\",\n  \"sender\": \"+447777888999\",\n  \"message\": \"OTP code 728192\",\n  \"timestamp\": 1712345678\n}"
+            }
+          }
+        },
+        {
+          "name": "List SMS Messages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/sms?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sms"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/stats"
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/health"
+          }
+        }
+      ]
+    }
+  ]
+}

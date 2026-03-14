@@ -1,0 +1,206 @@
+version: '3.9'
+
+services:
+  # ============================================================
+  # Infrastructure
+  # ============================================================
+  mysql:
+    image: mysql:8.0
+    container_name: smsgw-mysql
+    restart: unless-stopped
+    ports:
+      - '${MYSQL_PORT:-3306}:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sms_gateway_db}
+      MYSQL_USER: ${MYSQL_USER:-smsgateway}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-smsgateway_password}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p${MYSQL_ROOT_PASSWORD:-root_password}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - sms-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: smsgw-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sms-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: smsgw-rabbitmq
+    restart: unless-stopped
+    ports:
+      - '${RABBITMQ_PORT:-5672}:5672'
+      - '${RABBITMQ_MANAGEMENT_PORT:-15672}:15672'
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-smsgateway}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-smsgateway_password}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - sms-network
+
+  # ============================================================
+  # Application Services
+  # ============================================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/api-gateway/Dockerfile
+    container_name: smsgw-api-gateway
+    restart: unless-stopped
+    ports:
+      - '${API_PORT:-3000}:3000'
+    environment:
+      - NODE_ENV=production
+      - API_PORT=3000
+      - API_PREFIX=api
+      - DATABASE_URL=mysql://${MYSQL_USER:-smsgateway}:${MYSQL_PASSWORD:-smsgateway_password}@mysql:3306/${MYSQL_DATABASE:-sms_gateway_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_KEY_PREFIX="smsgw:"
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-smsgateway}:${RABBITMQ_PASSWORD:-smsgateway_password}@rabbitmq:5672
+      - CORS_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-smsgw-access-secret-change-in-production}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-smsgw-refresh-secret-change-in-production}
+      - JWT_ACCESS_EXPIRES=${JWT_ACCESS_EXPIRES:-15m}
+      - JWT_REFRESH_EXPIRES=${JWT_REFRESH_EXPIRES:-7d}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-false}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sms-network
+
+  sms-worker:
+    build:
+      context: .
+      dockerfile: docker/sms-worker/Dockerfile
+    container_name: smsgw-sms-worker
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://${MYSQL_USER:-smsgateway}:${MYSQL_PASSWORD:-smsgateway_password}@mysql:3306/${MYSQL_DATABASE:-sms_gateway_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_KEY_PREFIX="smsgw:"
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-smsgateway}:${RABBITMQ_PASSWORD:-smsgateway_password}@rabbitmq:5672
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sms-network
+
+  telegram-worker:
+    build:
+      context: .
+      dockerfile: docker/telegram-worker/Dockerfile
+    container_name: smsgw-telegram-worker
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-smsgateway}:${RABBITMQ_PASSWORD:-smsgateway_password}@rabbitmq:5672
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-false}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sms-network
+
+  device-monitor-worker:
+    build:
+      context: .
+      dockerfile: docker/device-monitor-worker/Dockerfile
+    container_name: smsgw-device-monitor
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://${MYSQL_USER:-smsgateway}:${MYSQL_PASSWORD:-smsgateway_password}@mysql:3306/${MYSQL_DATABASE:-sms_gateway_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_KEY_PREFIX="smsgw:"
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-smsgateway}:${RABBITMQ_PASSWORD:-smsgateway_password}@rabbitmq:5672
+      - DEVICE_HEARTBEAT_TTL=120
+      - DEVICE_HEARTBEAT_CHECK_INTERVAL=30000
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sms-network
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard/Dockerfile
+    container_name: smsgw-dashboard
+    restart: unless-stopped
+    networks:
+      - sms-network
+
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: smsgw-nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - api-gateway
+      - dashboard
+    networks:
+      - sms-network
+
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+networks:
+  sms-network:
+    driver: bridge

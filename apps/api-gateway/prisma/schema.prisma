@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Device {
+  id         String   @id @default(uuid())
+  deviceId   String   @unique @map("device_id")
+  name       String
+  apiKeyHash String   @map("api_key_hash")
+  status     String   @default("online")
+  lastSeen   DateTime @default(now()) @map("last_seen")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  messages SmsMessage[]
+
+  @@index([deviceId])
+  @@index([status])
+  @@map("devices")
+}
+
+model SmsMessage {
+  id        String   @id @default(uuid())
+  deviceId  String   @map("device_id")
+  sender    String
+  message   String   @db.Text
+  timestamp BigInt
+  otpCode   String?  @map("otp_code")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  device Device @relation(fields: [deviceId], references: [deviceId])
+
+  @@index([deviceId])
+  @@index([timestamp])
+  @@index([createdAt])
+  @@map("sms_messages")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  username         String   @unique
+  passwordHash     String   @map("password_hash")
+  role             String   @default("viewer")
+  enabled          Boolean  @default(true)
+  totpSecret       String?  @map("totp_secret")
+  totpEnabled      Boolean  @default(false) @map("totp_enabled")
+  refreshTokenHash String?  @map("refresh_token_hash")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
