@@ -183,6 +183,12 @@ importers:
       '@sms-gateway/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      amqp-connection-manager:
+        specifier: ^4.1.14
+        version: 4.1.15(amqplib@0.10.9)
+      amqplib:
+        specifier: ^0.10.4
+        version: 0.10.9
       ioredis:
         specifier: ^5.4.1
         version: 5.10.0

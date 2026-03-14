@@ -18,6 +18,8 @@
     "@nestjs/schedule": "^4.0.0",
     "@prisma/client": "^5.18.0",
     "@sms-gateway/shared-types": "workspace:*",
+    "amqp-connection-manager": "^4.1.14",
+    "amqplib": "^0.10.4",
     "ioredis": "^5.4.1",
     "reflect-metadata": "^0.2.2",
     "rimraf": "^6.0.1",
