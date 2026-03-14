@@ -26,6 +26,7 @@
     "@nestjs/cqrs": "^10.2.0",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-fastify": "^10.4.0",
+    "fastify": "^4.28.0",
     "@nestjs/platform-socket.io": "^10.4.0",
     "@nestjs/swagger": "^7.4.0",
     "@nestjs/websockets": "^10.4.0",
