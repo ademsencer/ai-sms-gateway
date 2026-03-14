@@ -15,6 +15,8 @@ COPY --from=deps /app/packages/shared-types/node_modules ./packages/shared-types
 COPY --from=deps /app/packages/shared-utils/node_modules ./packages/shared-utils/node_modules
 COPY --from=deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
 COPY . .
+RUN cd packages/shared-types && pnpm build
+RUN cd packages/shared-utils && pnpm build
 RUN cd apps/dashboard && pnpm build
 
 FROM nginx:alpine AS runner

@@ -74,10 +74,10 @@ services:
     container_name: smsgw-api-gateway
     restart: unless-stopped
     ports:
-      - '${API_PORT:-3000}:3000'
+      - '${API_PORT:-3005}:3005'
     environment:
       - NODE_ENV=production
-      - API_PORT=3000
+      - API_PORT=3005
       - API_PREFIX=api
       - DATABASE_URL=mysql://${MYSQL_USER:-smsgateway}:${MYSQL_PASSWORD:-smsgateway_password}@mysql:3306/${MYSQL_DATABASE:-sms_gateway_db}
       - REDIS_HOST=redis

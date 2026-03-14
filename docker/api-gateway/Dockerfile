@@ -20,6 +20,8 @@ COPY --from=deps /app/packages/shared-types/node_modules ./packages/shared-types
 COPY --from=deps /app/packages/shared-utils/node_modules ./packages/shared-utils/node_modules
 COPY --from=deps /app/apps/api-gateway/node_modules ./apps/api-gateway/node_modules
 COPY . .
+RUN cd packages/shared-types && pnpm build
+RUN cd packages/shared-utils && pnpm build
 RUN cd apps/api-gateway && pnpm build
 
 # Production stage
@@ -32,8 +34,10 @@ COPY --from=builder /app/apps/api-gateway/dist ./dist
 COPY --from=builder /app/apps/api-gateway/node_modules ./node_modules
 COPY --from=builder /app/apps/api-gateway/package.json ./package.json
 COPY --from=builder /app/apps/api-gateway/prisma ./prisma
+COPY --from=builder /app/packages/shared-types ./node_modules/@sms-gateway/shared-types
+COPY --from=builder /app/packages/shared-utils ./node_modules/@sms-gateway/shared-utils
 
 USER nestjs
-EXPOSE 3000
+EXPOSE 3005
 
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]

@@ -34,6 +34,7 @@ apps/android-client/.gradle/
 apps/android-client/app/build/
 apps/android-client/build/
 apps/android-client/local.properties
+apps/android-client/keystore.jks
 *.apk
 *.aab
 

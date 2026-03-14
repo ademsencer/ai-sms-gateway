@@ -11,17 +11,42 @@ android {
         applicationId = "com.smsgateway"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = (project.findProperty("VERSION_CODE") as? String)?.toIntOrNull() ?: 1
+        versionName = project.findProperty("VERSION_NAME") as? String ?: "1.0.0"
 
         val apiUrl = project.findProperty("API_URL") as? String ?: "http://10.0.2.2:3000"
         buildConfigField("String", "API_URL", "\"$apiUrl\"")
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = project.findProperty("KEYSTORE_FILE") as? String
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = project.findProperty("KEYSTORE_PASSWORD") as? String ?: ""
+                keyAlias = project.findProperty("KEY_ALIAS") as? String ?: "smsgateway"
+                keyPassword = project.findProperty("KEY_PASSWORD") as? String ?: ""
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            val apiUrl = project.findProperty("API_URL") as? String ?: "http://10.0.2.2:3000"
+            buildConfigField("String", "API_URL", "\"$apiUrl\"")
+        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+            val keystorePath = project.findProperty("KEYSTORE_FILE") as? String
+            if (keystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+
+            val apiUrl = project.findProperty("API_URL") as? String ?: "https://your-server.com"
+            buildConfigField("String", "API_URL", "\"$apiUrl\"")
         }
     }
 
