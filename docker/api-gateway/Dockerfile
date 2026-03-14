@@ -32,4 +32,4 @@ COPY --from=builder /app/packages ./packages
 USER nestjs
 EXPOSE 3005
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed || true && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
