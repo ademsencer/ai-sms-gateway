@@ -41,3 +41,4 @@ apps/android-client/keystore.jks
 # Docker volumes
 docker/mysql/data/
 docker/redis/data/
+*.tsbuildinfo
