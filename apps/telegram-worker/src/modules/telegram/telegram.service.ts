@@ -14,7 +14,7 @@ export class TelegramService {
     this.enabled = this.configService.get<boolean>('telegram.enabled', false);
   }
 
-  async sendMessage(deviceId: string, sender: string, message: string): Promise<void> {
+  async sendMessage(deviceId: string, sender: string, message: string, deviceModel?: string): Promise<void> {
     if (!this.enabled) {
       this.logger.debug('Telegram forwarding disabled, skipping');
       return;
@@ -25,10 +25,12 @@ export class TelegramService {
       return;
     }
 
+    const deviceLabel = deviceModel ? `${deviceModel} (${deviceId})` : deviceId;
+
     const text = [
       '\u{1F4E9} *SMS RECEIVED*',
       '',
-      `*Device:* \`${deviceId}\``,
+      `*Device:* \`${this.escapeMarkdown(deviceLabel)}\``,
       `*From:* \`${sender}\``,
       '',
       `*Message:* ${this.escapeMarkdown(message)}`,
@@ -89,8 +91,8 @@ export class TelegramService {
     const lines = [
       `${icon} *${title}*`,
       '',
-      `*Device:* \`${event.deviceId}\``,
-      `*Name:* ${this.escapeMarkdown(event.deviceName)}`,
+      `*Device ID:* \`${event.deviceId}\``,
+      `*Model:* ${this.escapeMarkdown(event.deviceName)}`,
       `*Time:* ${new Date(event.occurredAt).toLocaleString()}`,
     ];
 

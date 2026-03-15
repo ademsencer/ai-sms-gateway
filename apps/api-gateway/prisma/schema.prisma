@@ -35,7 +35,7 @@ model SmsMessage {
   otpCode   String?  @map("otp_code")
   createdAt DateTime @default(now()) @map("created_at")
 
-  device Device @relation(fields: [deviceId], references: [deviceId])
+  device Device @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
 
   @@index([deviceId])
   @@index([timestamp])

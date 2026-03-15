@@ -19,6 +19,7 @@ export const ROUTING_KEYS = {
 
 export interface SmsReceivedEvent {
   deviceId: string;
+  deviceModel?: string;
   sender: string;
   message: string;
   timestamp: number;

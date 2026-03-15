@@ -22,6 +22,6 @@ export class TelegramConsumerService implements OnModuleInit {
     const event = raw as unknown as SmsReceivedEvent;
 
     this.logger.log(`Forwarding SMS to Telegram — device: ${event.deviceId}, sender: ${event.sender}`);
-    await this.telegram.sendMessage(event.deviceId, event.sender, event.message);
+    await this.telegram.sendMessage(event.deviceId, event.sender, event.message, event.deviceModel);
   }
 }
