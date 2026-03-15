@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy everything and install all deps in one go
 FROM base AS builder
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* tsconfig.base.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* tsconfig.base.json VERSION* ./
 COPY packages/ ./packages/
 COPY apps/api-gateway/ ./apps/api-gateway/
 RUN pnpm install --frozen-lockfile || pnpm install
@@ -28,6 +28,7 @@ COPY --from=builder /app/apps/api-gateway/node_modules ./apps/api-gateway/node_m
 COPY --from=builder /app/apps/api-gateway/package.json ./package.json
 COPY --from=builder /app/apps/api-gateway/prisma ./prisma
 COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/VERSION* ./
 
 USER nestjs
 EXPOSE 3005
