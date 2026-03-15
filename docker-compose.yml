@@ -73,6 +73,12 @@ services:
     restart: unless-stopped
     ports:
       - '${API_PORT:-3005}:3005'
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3005/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     environment:
       - NODE_ENV=production
       - API_PORT=3005
@@ -186,8 +192,10 @@ services:
     ports:
       - '${NGINX_PORT:-5173}:80'
     depends_on:
-      - api-gateway
-      - dashboard
+      api-gateway:
+        condition: service_healthy
+      dashboard:
+        condition: service_started
     networks:
       - sms-network
 

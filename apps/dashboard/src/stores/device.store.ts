@@ -5,7 +5,9 @@ import { useApi } from '@/composables/useApi';
 export interface Device {
   id: string;
   deviceId: string;
-  name: string;
+  model?: string;
+  androidVersion?: string;
+  serialNumber?: string;
   status: string;
   lastSeen: string;
   createdAt: string;
@@ -13,7 +15,6 @@ export interface Device {
 
 export interface RegisterDeviceResult {
   deviceId: string;
-  name: string;
   apiKey: string;
 }
 
@@ -32,13 +33,6 @@ export const useDeviceStore = defineStore('device', () => {
     }
   }
 
-  async function registerDevice(deviceId: string, name: string): Promise<RegisterDeviceResult> {
-    const result = await post<RegisterDeviceResult>('/device/register', { deviceId, name });
-    apiKeys[deviceId] = result.apiKey;
-    await fetchDevices();
-    return result;
-  }
-
   async function regenerateKey(deviceId: string): Promise<string> {
     const result = await post<{ deviceId: string; apiKey: string }>(`/device/${deviceId}/regenerate-key`, {});
     apiKeys[deviceId] = result.apiKey;
@@ -53,5 +47,5 @@ export const useDeviceStore = defineStore('device', () => {
     }
   }
 
-  return { devices, loading, apiKeys, fetchDevices, registerDevice, regenerateKey, updateDeviceStatus };
+  return { devices, loading, apiKeys, fetchDevices, regenerateKey, updateDeviceStatus };
 });

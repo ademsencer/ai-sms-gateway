@@ -76,7 +76,7 @@ export class AuthGuard implements CanActivate {
     // Attach device info to request
     request.device = {
       deviceId: device.deviceId,
-      name: device.name,
+      model: device.model,
       status: device.status,
     };
 

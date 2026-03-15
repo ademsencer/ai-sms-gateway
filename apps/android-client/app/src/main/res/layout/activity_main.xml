@@ -181,26 +181,10 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Register Device"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
+                    android:text="Connect this device to the SMS Gateway server"
+                    android:textSize="14sp"
+                    android:textColor="#666666"
                     android:layout_marginBottom="12dp" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Device Name (unique)"
-                    android:layout_marginBottom="12dp"
-                    xmlns:app="http://schemas.android.com/apk/res-auto"
-                    app:boxBackgroundMode="outline">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etDeviceName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="text"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
 
                 <Button
                     android:id="@+id/btnRegister"

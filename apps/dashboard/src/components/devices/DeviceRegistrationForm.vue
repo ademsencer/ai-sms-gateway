@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useApi } from '@/composables/useApi';
 import { useDeviceStore } from '@/stores/device.store';
 
 const emit = defineEmits<{ registered: [] }>();
 
 const deviceStore = useDeviceStore();
+const { post } = useApi();
 const deviceId = ref('');
-const name = ref('');
 const loading = ref(false);
 const error = ref('');
 const apiKey = ref('');
@@ -17,8 +18,10 @@ async function onSubmit() {
   apiKey.value = '';
   loading.value = true;
   try {
-    const result = await deviceStore.registerDevice(deviceId.value, name.value);
+    const result = await post<{ deviceId: string; apiKey: string }>('/device/register', { deviceId: deviceId.value });
     apiKey.value = result.apiKey;
+    deviceStore.apiKeys[deviceId.value] = result.apiKey;
+    await deviceStore.fetchDevices();
     emit('registered');
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Registration failed';
@@ -35,7 +38,6 @@ function copyKey() {
 
 function reset() {
   deviceId.value = '';
-  name.value = '';
   error.value = '';
   apiKey.value = '';
 }
@@ -69,37 +71,23 @@ function reset() {
         <p class="text-sm text-red-700">{{ error }}</p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label for="deviceId" class="block text-sm font-medium text-gray-700 mb-1">Device ID</label>
-          <input
-            id="deviceId"
-            v-model="deviceId"
-            type="text"
-            required
-            minlength="3"
-            maxlength="64"
-            placeholder="e.g. my_phone_001"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          />
-        </div>
-        <div>
-          <label for="deviceName" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-          <input
-            id="deviceName"
-            v-model="name"
-            type="text"
-            required
-            maxlength="128"
-            placeholder="e.g. Samsung Galaxy S24"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          />
-        </div>
+      <div>
+        <label for="deviceId" class="block text-sm font-medium text-gray-700 mb-1">Device ID</label>
+        <input
+          id="deviceId"
+          v-model="deviceId"
+          type="text"
+          required
+          minlength="3"
+          maxlength="64"
+          placeholder="e.g. my_phone_001"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+        />
       </div>
 
       <button
         type="submit"
-        :disabled="loading || !deviceId || !name"
+        :disabled="loading || !deviceId"
         class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {{ loading ? 'Registering...' : 'Register Device' }}

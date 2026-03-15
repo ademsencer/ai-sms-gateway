@@ -7,9 +7,6 @@ export class DeviceResponseDto {
   @ApiProperty()
   deviceId: string;
 
-  @ApiProperty()
-  name: string;
-
   @ApiPropertyOptional()
   androidVersion?: string;
 
@@ -32,9 +29,6 @@ export class DeviceResponseDto {
 export class RegisterDeviceResponseDto {
   @ApiProperty()
   deviceId: string;
-
-  @ApiProperty()
-  name: string;
 
   @ApiProperty({ description: 'API key for device authentication. Store this securely — it cannot be retrieved again.' })
   apiKey: string;

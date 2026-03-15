@@ -2,21 +2,13 @@ import { IsString, IsNotEmpty, MinLength, MaxLength, IsOptional } from 'class-va
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RegisterDeviceDto {
-  /** Unique device identifier (e.g. device_001) */
+  /** Unique device identifier */
   @ApiProperty({ example: 'device_001', description: 'Unique device identifier' })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
   @MaxLength(64)
   deviceId: string;
-
-  /** Human-readable device name (must be unique) */
-  @ApiProperty({ example: 'Samsung Galaxy S24', description: 'Device display name (must be unique)' })
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(1)
-  @MaxLength(128)
-  name: string;
 
   /** Android version */
   @ApiPropertyOptional({ example: '15', description: 'Android OS version' })

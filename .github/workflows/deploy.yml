@@ -89,13 +89,22 @@ jobs:
               apt-get update && apt-get install -y docker-compose-plugin
             fi
 
-            # Build and deploy
-            docker compose down || true
-            docker compose up -d --build --remove-orphans
+            # Build images first (no downtime during build)
+            docker compose build --parallel
 
-            # Wait for health
-            echo "Waiting for services..."
-            sleep 30
+            # Recreate only changed services (infra stays up: mysql, redis, rabbitmq)
+            docker compose up -d --no-build --remove-orphans
+
+            # Wait for API gateway health check
+            echo "Waiting for API gateway to be healthy..."
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:3005/api/health > /dev/null 2>&1; then
+                echo "API gateway healthy!"
+                break
+              fi
+              echo "  attempt $i/30..."
+              sleep 5
+            done
 
             # Verify
             docker compose ps

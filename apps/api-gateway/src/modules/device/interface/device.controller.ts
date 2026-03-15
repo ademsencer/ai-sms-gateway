@@ -40,22 +40,12 @@ export class DeviceController {
       return ApiResponseDto.fail<RegisterDeviceResponseDto>('Device already registered');
     }
 
-    // Check unique name
-    const nameExists = await this.prisma.device.findUnique({
-      where: { name: dto.name },
-    });
-
-    if (nameExists) {
-      return ApiResponseDto.fail<RegisterDeviceResponseDto>('A device with this name already exists');
-    }
-
     const apiKey = uuidv4();
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
 
     await this.prisma.device.create({
       data: {
         deviceId: dto.deviceId,
-        name: dto.name,
         apiKeyHash,
         androidVersion: dto.androidVersion,
         model: dto.model,
@@ -63,10 +53,10 @@ export class DeviceController {
       },
     });
 
-    this.logger.log(`Device registered: ${dto.deviceId} (${dto.name}) — model: ${dto.model}, android: ${dto.androidVersion}`);
+    this.logger.log(`Device registered: ${dto.deviceId} — model: ${dto.model}, android: ${dto.androidVersion}`);
 
     return ApiResponseDto.ok<RegisterDeviceResponseDto>(
-      { deviceId: dto.deviceId, name: dto.name, apiKey },
+      { deviceId: dto.deviceId, apiKey },
       'Device registered successfully. Store the API key securely.',
     );
   }
@@ -101,12 +91,12 @@ export class DeviceController {
   @ApiOperation({ summary: 'Report device lifecycle event', description: 'Reports device events (connected, disconnected, error) for Telegram notifications.' })
   @ApiResponse({ status: 200, description: 'Event accepted' })
   async reportEvent(@Body() dto: DeviceEventDto, @Req() req: any): Promise<ApiResponseDto<{ accepted: boolean }>> {
-    const device = req.device || { deviceId: dto.deviceId, name: 'Unknown' };
+    const device = req.device || { deviceId: dto.deviceId, model: 'Unknown' };
 
     const routingKey = `device.${dto.eventType}`;
     const event: DeviceLifecycleEvent = {
       deviceId: device.deviceId,
-      deviceName: device.name,
+      deviceName: device.model || device.deviceId,
       eventType: dto.eventType as DeviceEventType,
       message: dto.message,
       occurredAt: new Date().toISOString(),
@@ -141,7 +131,6 @@ export class DeviceController {
     const result: DeviceResponseDto[] = devices.map((d) => ({
       id: d.id,
       deviceId: d.deviceId,
-      name: d.name,
       androidVersion: d.androidVersion ?? undefined,
       model: d.model ?? undefined,
       serialNumber: d.serialNumber ?? undefined,
@@ -161,10 +150,10 @@ export class DeviceController {
     if (!device) return ApiResponseDto.fail('Device not found');
     const updated = await this.prisma.device.update({
       where: { deviceId },
-      data: { name: dto.name },
+      data: { model: dto.model },
     });
     this.logger.log(`Device updated: ${deviceId}`);
-    return ApiResponseDto.ok({ deviceId: updated.deviceId, name: updated.name }, 'Device updated');
+    return ApiResponseDto.ok({ deviceId: updated.deviceId, model: updated.model }, 'Device updated');
   }
 
   @Delete(':deviceId')

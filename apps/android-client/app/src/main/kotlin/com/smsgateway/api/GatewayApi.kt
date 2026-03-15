@@ -26,7 +26,6 @@ data class DeviceEventPayload(
 
 data class RegisterDevicePayload(
     @SerializedName("deviceId") val deviceId: String,
-    @SerializedName("name") val name: String,
     @SerializedName("androidVersion") val androidVersion: String?,
     @SerializedName("model") val model: String?,
     @SerializedName("serialNumber") val serialNumber: String?
@@ -34,7 +33,6 @@ data class RegisterDevicePayload(
 
 data class RegisterDeviceData(
     @SerializedName("deviceId") val deviceId: String,
-    @SerializedName("name") val name: String,
     @SerializedName("apiKey") val apiKey: String
 )
 

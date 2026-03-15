@@ -7,11 +7,9 @@ import { useApi } from '@/composables/useApi';
 defineProps<{ devices: Device[] }>();
 
 const deviceStore = useDeviceStore();
-const { patch, del } = useApi();
+const { del } = useApi();
 const copiedId = ref('');
 const regenerating = ref('');
-const editingId = ref('');
-const editName = ref('');
 const deleteConfirmId = ref('');
 
 function formatDate(iso: string): string {
@@ -36,26 +34,6 @@ async function regenerate(deviceId: string) {
   }
 }
 
-function startEdit(device: Device) {
-  editingId.value = device.deviceId;
-  editName.value = device.name;
-}
-
-async function saveEdit(deviceId: string) {
-  try {
-    await patch(`/device/${deviceId}`, { name: editName.value });
-    const device = deviceStore.devices.find(d => d.deviceId === deviceId);
-    if (device) device.name = editName.value;
-    editingId.value = '';
-  } catch (e) {
-    console.error('Failed to update device', e);
-  }
-}
-
-function cancelEdit() {
-  editingId.value = '';
-}
-
 async function deleteDevice(deviceId: string) {
   try {
     await del(`/device/${deviceId}`);
@@ -73,7 +51,8 @@ async function deleteDevice(deviceId: string) {
       <thead class="bg-gray-50">
         <tr>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device ID</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Android</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">API Key</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
@@ -83,23 +62,8 @@ async function deleteDevice(deviceId: string) {
       <tbody class="divide-y divide-gray-200">
         <tr v-for="device in devices" :key="device.id" class="hover:bg-gray-50">
           <td class="px-6 py-4 text-sm font-mono text-gray-900">{{ device.deviceId }}</td>
-          <td class="px-6 py-4 text-sm text-gray-700">
-            <template v-if="editingId === device.deviceId">
-              <div class="flex items-center gap-1">
-                <input
-                  v-model="editName"
-                  @keyup.enter="saveEdit(device.deviceId)"
-                  @keyup.escape="cancelEdit()"
-                  class="px-2 py-1 border border-gray-300 rounded text-sm w-32 focus:ring-1 focus:ring-primary-600 outline-none"
-                />
-                <button @click="saveEdit(device.deviceId)" class="text-green-600 hover:text-green-800 text-xs">Save</button>
-                <button @click="cancelEdit()" class="text-gray-500 hover:text-gray-700 text-xs">Cancel</button>
-              </div>
-            </template>
-            <template v-else>
-              <span class="cursor-pointer hover:text-primary-600" @click="startEdit(device)">{{ device.name }}</span>
-            </template>
-          </td>
+          <td class="px-6 py-4 text-sm text-gray-700">{{ device.model || '—' }}</td>
+          <td class="px-6 py-4 text-sm text-gray-500">{{ device.androidVersion || '—' }}</td>
           <td class="px-6 py-4">
             <span
               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
@@ -146,7 +110,7 @@ async function deleteDevice(deviceId: string) {
           </td>
         </tr>
         <tr v-if="devices.length === 0">
-          <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-400">No devices registered</td>
+          <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-400">No devices registered</td>
         </tr>
       </tbody>
     </table>

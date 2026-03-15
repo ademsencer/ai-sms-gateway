@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -33,7 +32,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvModel: TextView
     private lateinit var tvAndroidVersion: TextView
     private lateinit var tvStatus: TextView
-    private lateinit var etDeviceName: EditText
     private lateinit var btnRegister: Button
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
@@ -50,7 +48,6 @@ class MainActivity : AppCompatActivity() {
         tvModel = findViewById(R.id.tvModel)
         tvAndroidVersion = findViewById(R.id.tvAndroidVersion)
         tvStatus = findViewById(R.id.tvStatus)
-        etDeviceName = findViewById(R.id.etDeviceName)
         btnRegister = findViewById(R.id.btnRegister)
         btnStart = findViewById(R.id.btnStart)
         btnStop = findViewById(R.id.btnStop)
@@ -61,11 +58,6 @@ class MainActivity : AppCompatActivity() {
         tvDeviceId.text = prefs.deviceId
         tvModel.text = "${Build.MANUFACTURER} ${Build.MODEL}"
         tvAndroidVersion.text = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
-
-        // Pre-fill device name with model if empty
-        if (etDeviceName.text.isNullOrBlank()) {
-            etDeviceName.setText("${Build.MANUFACTURER} ${Build.MODEL}")
-        }
 
         // Copy device ID
         findViewById<ImageButton>(R.id.btnCopyDeviceId).setOnClickListener {
@@ -93,12 +85,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun registerDevice() {
-        val name = etDeviceName.text.toString().trim()
-        if (name.isBlank()) {
-            Toast.makeText(this, "Please enter a device name", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         btnRegister.isEnabled = false
         btnRegister.text = "Registering..."
 
@@ -108,7 +94,6 @@ class MainActivity : AppCompatActivity() {
             try {
                 val payload = RegisterDevicePayload(
                     deviceId = prefs.deviceId,
-                    name = name,
                     androidVersion = Build.VERSION.RELEASE,
                     model = "${Build.MANUFACTURER} ${Build.MODEL}",
                     serialNumber = Build.SERIAL.takeIf { it != Build.UNKNOWN } ?: Build.FINGERPRINT.takeLast(32)
@@ -121,7 +106,7 @@ class MainActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body()?.success == true) {
                     val apiKey = response.body()?.data?.apiKey ?: ""
                     prefs.apiKey = apiKey
-                    Toast.makeText(this@MainActivity, "Device registered successfully!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Device registered!", Toast.LENGTH_SHORT).show()
                     updateUI()
                 } else {
                     val msg = response.body()?.message ?: "Registration failed (${response.code()})"

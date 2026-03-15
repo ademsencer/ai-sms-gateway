@@ -1,9 +1,10 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateDeviceDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  name?: string;
+  @MaxLength(128)
+  model?: string;
 }
