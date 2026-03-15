@@ -89,6 +89,9 @@ class MainActivity : AppCompatActivity() {
         if (prefs.serviceEnabled && prefs.isConfigured) {
             startGatewayService()
         }
+
+        // Check for app updates
+        AppUpdater.checkForUpdate(this, prefs.apiUrl, BuildConfig.VERSION_NAME)
     }
 
     override fun onResume() {

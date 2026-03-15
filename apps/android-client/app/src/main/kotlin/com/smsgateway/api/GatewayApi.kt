@@ -7,6 +7,7 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import java.util.concurrent.TimeUnit
@@ -53,6 +54,11 @@ data class EventResult(
     @SerializedName("accepted") val accepted: Boolean
 )
 
+data class HealthResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("version") val version: String
+)
+
 interface GatewayApiService {
     @POST("api/sms")
     suspend fun sendSms(
@@ -70,6 +76,9 @@ interface GatewayApiService {
     suspend fun registerDevice(
         @Body payload: RegisterDevicePayload
     ): Response<ApiResponse<RegisterDeviceData>>
+
+    @GET("api/health")
+    suspend fun checkHealth(): Response<HealthResponse>
 }
 
 object GatewayApi {
