@@ -109,6 +109,17 @@ function parseDetails(details: string | null): { type: 'json'; data: Record<stri
   }
 }
 
+function getJsonData(details: string | null): Record<string, unknown> {
+  const parsed = parseDetails(details);
+  if (parsed && parsed.type === 'json') return parsed.data;
+  return {};
+}
+
+function isJsonDetails(details: string | null): boolean {
+  const parsed = parseDetails(details);
+  return parsed?.type === 'json' || false;
+}
+
 function formatValue(val: unknown): string {
   if (val === null || val === undefined) return '—';
   if (typeof val === 'boolean') return val ? 'Yes' : 'No';
@@ -247,9 +258,9 @@ onMounted(() => loadPage(1));
                 <td colspan="6" class="px-4 py-0">
                   <div class="py-3 pl-4 border-l-2 border-blue-200 ml-2 mb-2">
                     <!-- JSON key-value display -->
-                    <template v-if="parseDetails(log.details)?.type === 'json'">
+                    <template v-if="isJsonDetails(log.details)">
                       <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 max-h-48 overflow-y-auto pr-2">
-                        <template v-for="(val, key) in (parseDetails(log.details) as { type: 'json'; data: Record<string, unknown> }).data" :key="key">
+                        <template v-for="(val, key) in getJsonData(log.details)" :key="key">
                           <span class="text-[11px] font-medium text-gray-500 whitespace-nowrap">{{ formatKey(String(key)) }}</span>
                           <span class="text-[11px] text-gray-800 font-mono break-all">{{ formatValue(val) }}</span>
                         </template>
