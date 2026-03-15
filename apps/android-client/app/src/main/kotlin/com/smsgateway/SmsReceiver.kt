@@ -17,16 +17,25 @@ class SmsReceiver : BroadcastReceiver() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
+        Log.i(tag, "=== BroadcastReceiver triggered === action=${intent.action}")
+
+        if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
+            Log.d(tag, "Not SMS_RECEIVED action, ignoring: ${intent.action}")
+            return
+        }
 
         val prefs = AppPreferences(context)
         if (!prefs.isConfigured || !prefs.serviceEnabled) {
-            Log.d(tag, "Service not configured or disabled, ignoring SMS")
+            Log.w(tag, "Service not configured (configured=${prefs.isConfigured}) or disabled (enabled=${prefs.serviceEnabled}), ignoring SMS")
             return
         }
 
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-        if (messages.isNullOrEmpty()) return
+        if (messages.isNullOrEmpty()) {
+            Log.w(tag, "No messages in intent")
+            return
+        }
+        Log.i(tag, "Received ${messages.size} message parts")
 
         // Extend broadcast lifecycle (up to 60s instead of default 10s)
         val pendingResult = goAsync()

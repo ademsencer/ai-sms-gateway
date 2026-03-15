@@ -26,27 +26,43 @@ class SmsObserver(
 
     private val tag = "SmsObserver"
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var changeCount = 0
 
     override fun onChange(selfChange: Boolean, uri: Uri?) {
         super.onChange(selfChange, uri)
+        changeCount++
 
-        // Only process inbox changes
-        if (uri == null) return
+        Log.d(tag, "onChange triggered #$changeCount — selfChange=$selfChange, uri=$uri")
+
+        if (uri == null) {
+            Log.d(tag, "URI is null, skipping")
+            return
+        }
 
         val prefs = AppPreferences(context)
-        if (!prefs.isConfigured || !prefs.serviceEnabled) return
+        if (!prefs.isConfigured) {
+            Log.w(tag, "App not configured, skipping SMS processing")
+            return
+        }
+        if (!prefs.serviceEnabled) {
+            Log.w(tag, "Service disabled, skipping SMS processing")
+            return
+        }
+
+        Log.d(tag, "Processing SMS change — deviceId=${prefs.deviceId}, apiUrl=${prefs.apiUrl}")
 
         scope.launch {
             try {
                 processNewSms(prefs)
             } catch (e: Exception) {
-                Log.e(tag, "Error processing SMS from ContentObserver: ${e.message}")
+                Log.e(tag, "Error processing SMS from ContentObserver: ${e.message}", e)
             }
         }
     }
 
     private suspend fun processNewSms(prefs: AppPreferences) {
         val lastId = SmsDedup.getLastSmsId(context)
+        Log.d(tag, "processNewSms — lastId=$lastId")
 
         val cursor = context.contentResolver.query(
             Telephony.Sms.Inbox.CONTENT_URI,
@@ -59,8 +75,12 @@ class SmsObserver(
             if (lastId > 0) "${Telephony.Sms._ID} > ?" else null,
             if (lastId > 0) arrayOf(lastId.toString()) else null,
             "${Telephony.Sms._ID} DESC LIMIT 5"
-        ) ?: return
+        ) ?: run {
+            Log.w(tag, "SMS query returned null cursor — SMS READ permission may be missing!")
+            return
+        }
 
+        Log.d(tag, "SMS query returned ${cursor.count} rows")
         var maxId = lastId
 
         cursor.use {

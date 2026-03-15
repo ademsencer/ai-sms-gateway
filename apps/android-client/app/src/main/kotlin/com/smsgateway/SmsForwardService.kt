@@ -1,7 +1,9 @@
 package com.smsgateway
 
+import android.Manifest
 import android.app.*
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Handler
@@ -13,6 +15,7 @@ import android.provider.Telephony
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import com.smsgateway.api.DeviceEventPayload
 import com.smsgateway.api.GatewayApi
 import com.smsgateway.data.AppPreferences
@@ -51,6 +54,9 @@ class SmsForwardService : Service() {
 
         // Initialize last SMS ID so observer only picks up new messages
         initializeLastSmsId()
+
+        // Log SMS permission status for debugging
+        logPermissionStatus()
 
         Log.d(tag, "Service created — WakeLock acquired, ContentObserver registered")
     }
@@ -141,6 +147,27 @@ class SmsForwardService : Service() {
         )
 
         super.onTaskRemoved(rootIntent)
+    }
+
+    private fun logPermissionStatus() {
+        val receiveSms = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+        val readSms = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        val batteryOptIgnored = pm.isIgnoringBatteryOptimizations(packageName)
+
+        Log.i(tag, "=== PERMISSION STATUS ===")
+        Log.i(tag, "RECEIVE_SMS: ${if (receiveSms) "GRANTED" else "DENIED"}")
+        Log.i(tag, "READ_SMS: ${if (readSms) "GRANTED" else "DENIED"}")
+        Log.i(tag, "Battery Optimization Ignored: $batteryOptIgnored")
+        Log.i(tag, "Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+        Log.i(tag, "Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+        Log.i(tag, "========================")
+
+        if (!receiveSms || !readSms) {
+            Log.e(tag, "SMS PERMISSIONS NOT GRANTED! SMS forwarding will NOT work.")
+            // Report this to the server so admin can see
+            reportEvent("error", "SMS permissions not granted: RECEIVE_SMS=$receiveSms, READ_SMS=$readSms")
+        }
     }
 
     private fun initializeLastSmsId() {

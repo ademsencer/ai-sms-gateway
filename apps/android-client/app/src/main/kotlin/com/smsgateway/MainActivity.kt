@@ -2,6 +2,7 @@ package com.smsgateway
 
 import android.Manifest
 import android.app.AlertDialog
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -9,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -25,6 +27,7 @@ import com.smsgateway.data.AppPreferences
 import kotlinx.coroutines.*
 
 class MainActivity : AppCompatActivity() {
+    private val tag = "MainActivity"
     private lateinit var prefs: AppPreferences
     private val permissionRequestCode = 1001
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -37,6 +40,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnStop: Button
     private lateinit var cardRegister: CardView
     private lateinit var layoutControls: LinearLayout
+    private lateinit var tvPermissionStatus: TextView
+    private lateinit var tvDiagnostics: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +58,9 @@ class MainActivity : AppCompatActivity() {
         cardRegister = findViewById(R.id.cardRegister)
         layoutControls = findViewById(R.id.layoutControls)
 
+        tvPermissionStatus = findViewById(R.id.tvPermissionStatus)
+        tvDiagnostics = findViewById(R.id.tvDiagnostics)
+
         btnRegister.setOnClickListener { registerDevice() }
         btnStart.setOnClickListener { startGatewayService() }
         btnStop.setOnClickListener { stopGatewayService() }
@@ -64,6 +72,11 @@ class MainActivity : AppCompatActivity() {
         checkAndRequestPermissions()
         updateUI()
 
+        // Show Xiaomi/MIUI autostart prompt if needed
+        if (isXiaomiDevice()) {
+            showAutoStartPromptIfNeeded()
+        }
+
         // Auto-start service if previously enabled and configured
         if (prefs.serviceEnabled && prefs.isConfigured) {
             startGatewayService()
@@ -74,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Re-check permissions when returning from Settings
         updateUI()
+        updateDiagnostics()
     }
 
     override fun onDestroy() {
@@ -214,6 +228,97 @@ class MainActivity : AppCompatActivity() {
             layoutControls.visibility = View.GONE
             tvStatus.text = "NOT REGISTERED"
         }
+
+        updateDiagnostics()
+    }
+
+    private fun updateDiagnostics() {
+        val receiveSms = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+        val readSms = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        val batteryIgnored = pm.isIgnoringBatteryOptimizations(packageName)
+
+        // Permission status
+        val allGranted = receiveSms && readSms
+        tvPermissionStatus.text = if (allGranted) "SMS İzinleri: ✓ Verildi" else "SMS İzinleri: ✗ Verilmedi"
+        tvPermissionStatus.setTextColor(if (allGranted) 0xFF16A34A.toInt() else 0xFFDC2626.toInt())
+
+        // Diagnostics
+        val diag = StringBuilder()
+        diag.appendLine("RECEIVE_SMS: ${if (receiveSms) "✓" else "✗"}")
+        diag.appendLine("READ_SMS: ${if (readSms) "✓" else "✗"}")
+        diag.appendLine("Pil Optimizasyonu Devre Dışı: ${if (batteryIgnored) "✓" else "✗"}")
+        diag.appendLine("Cihaz: ${Build.MANUFACTURER} ${Build.MODEL}")
+        diag.appendLine("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+        if (isXiaomiDevice()) diag.appendLine("⚠ Xiaomi/MIUI algılandı — Autostart gerekli")
+        tvDiagnostics.text = diag.toString().trim()
+
+        Log.d(tag, "Diagnostics updated: RECEIVE_SMS=$receiveSms, READ_SMS=$readSms, batteryIgnored=$batteryIgnored")
+    }
+
+    // ─── Xiaomi/MIUI Autostart Support ─────────────────────────────────
+
+    private fun isXiaomiDevice(): Boolean {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        return manufacturer == "xiaomi" || manufacturer == "redmi" || manufacturer == "poco"
+    }
+
+    private fun showAutoStartPromptIfNeeded() {
+        val shownKey = "autostart_prompt_shown"
+        val shown = getSharedPreferences("sms_gateway_ui", MODE_PRIVATE).getBoolean(shownKey, false)
+        if (shown) return
+
+        AlertDialog.Builder(this)
+            .setTitle("Xiaomi Cihaz Algılandı")
+            .setMessage(
+                "Xiaomi/MIUI cihazlarda SMS iletimi için ek ayarlar gereklidir:\n\n" +
+                "1. Otomatik Başlatma (Autostart) açılmalı\n" +
+                "2. Pil tasarrufu kısıtlaması kapatılmalı\n" +
+                "3. SMS izinleri MIUI ayarlarından da verilmeli\n\n" +
+                "Şimdi Autostart ayarlarına yönlendirileceksiniz."
+            )
+            .setPositiveButton("Autostart Ayarlarına Git") { _, _ ->
+                openXiaomiAutoStart()
+                getSharedPreferences("sms_gateway_ui", MODE_PRIVATE)
+                    .edit().putBoolean(shownKey, true).apply()
+            }
+            .setNegativeButton("Sonra") { dialog, _ ->
+                dialog.dismiss()
+                getSharedPreferences("sms_gateway_ui", MODE_PRIVATE)
+                    .edit().putBoolean(shownKey, true).apply()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun openXiaomiAutoStart() {
+        val intents = listOf(
+            // Xiaomi MIUI
+            Intent().apply {
+                component = ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")
+            },
+            // Xiaomi MIUI (alternative)
+            Intent().apply {
+                component = ComponentName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
+            },
+            // Redmi / POCO
+            Intent().apply {
+                component = ComponentName("com.miui.securitycenter", "com.miui.permcenter.MainAc498tivity")
+            }
+        )
+
+        for (intent in intents) {
+            try {
+                startActivity(intent)
+                return
+            } catch (e: Exception) {
+                // Try next intent
+            }
+        }
+
+        // Fallback: open general app settings
+        Toast.makeText(this, "Autostart ayarını manuel açın: Ayarlar → Uygulamalar → SMS Gateway → Autostart", Toast.LENGTH_LONG).show()
+        openAppSettings()
     }
 
     // ─── Permission Handling ───────────────────────────────────────────
