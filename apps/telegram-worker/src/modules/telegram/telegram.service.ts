@@ -40,6 +40,7 @@ export class TelegramService {
       `*IBAN:* ${this.escapeMarkdown(iban || 'N/A')}`,
       `*Device ID:* \`${deviceId}\``,
       `*From:* \`${sender}\``,
+      `*Time:* ${this.formatTurkeyTime(new Date())}`,
       '',
       `*Message:* ${this.escapeMarkdown(message)}`,
     ].join('\n');
@@ -104,7 +105,7 @@ export class TelegramService {
       `*Name:* ${this.escapeMarkdown(event.ownerName || event.deviceName)}`,
       `*IBAN:* ${this.escapeMarkdown(event.iban || 'N/A')}`,
       `*Device ID:* \`${event.deviceId}\``,
-      `*Time:* ${new Date(event.occurredAt).toLocaleString()}`,
+      `*Time:* ${this.formatTurkeyTime(new Date(event.occurredAt))}`,
     ];
 
     const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
@@ -130,6 +131,10 @@ export class TelegramService {
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(`Telegram device notification failed: ${err.message}`);
     }
+  }
+
+  private formatTurkeyTime(date: Date): string {
+    return date.toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
   }
 
   private escapeMarkdown(text: string): string {
