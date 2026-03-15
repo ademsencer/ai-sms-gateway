@@ -19,15 +19,30 @@ export class AuditService {
     this.logger.log(`[AUDIT] ${params.username} ${params.action} ${params.target}`);
   }
 
-  async findAll(page = 1, limit = 50) {
+  async findAll(page = 1, limit = 20, filters?: { action?: string; search?: string }) {
     const skip = (page - 1) * limit;
+    const where: Record<string, unknown> = {};
+
+    if (filters?.action && filters.action !== 'all') {
+      where.action = filters.action;
+    }
+
+    if (filters?.search) {
+      where.OR = [
+        { username: { contains: filters.search } },
+        { target: { contains: filters.search } },
+        { details: { contains: filters.search } },
+      ];
+    }
+
     const [logs, total] = await Promise.all([
       this.prisma.auditLog.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      this.prisma.auditLog.count(),
+      this.prisma.auditLog.count({ where }),
     ]);
     return { data: logs, total, page, limit, totalPages: Math.ceil(total / limit) };
   }

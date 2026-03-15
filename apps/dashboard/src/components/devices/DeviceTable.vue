@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type { Device } from '@/stores/device.store';
 import { useDeviceStore } from '@/stores/device.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { useApi } from '@/composables/useApi';
 
 defineProps<{ devices: Device[] }>();
+const emit = defineEmits<{ refresh: [] }>();
 
+const router = useRouter();
 const deviceStore = useDeviceStore();
+const authStore = useAuthStore();
 const { del } = useApi();
 const copiedId = ref('');
 const regenerating = ref('');
@@ -61,10 +66,14 @@ async function deleteDevice(deviceId: string) {
   try {
     await del(`/device/${deviceId}`);
     deleteConfirmId.value = '';
-    await deviceStore.fetchDevices();
+    emit('refresh');
   } catch (e) {
     console.error('Failed to delete device', e);
   }
+}
+
+function viewSms(device: Device) {
+  router.push({ name: 'sms', query: { deviceId: device.deviceId, ownerName: device.ownerName } });
 }
 </script>
 
@@ -80,7 +89,7 @@ async function deleteDevice(deviceId: string) {
             <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
             <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">API Key</th>
             <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Last Seen</th>
-            <th class="px-4 py-3 text-right text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-32">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -95,7 +104,6 @@ async function deleteDevice(deviceId: string) {
               >
                 {{ shortId(device.deviceId) }}
               </button>
-              <!-- Copied tooltip -->
               <span
                 v-if="tooltipDeviceId === device.deviceId"
                 class="absolute left-0 -top-7 bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10"
@@ -140,25 +148,38 @@ async function deleteDevice(deviceId: string) {
               <div class="text-[10px] text-gray-400">{{ formatRelative(device.lastSeen) }}</div>
             </td>
             <td class="px-4 py-3 text-right">
-              <template v-if="deleteConfirmId === device.deviceId">
-                <span class="text-[11px] text-gray-500 mr-1">Delete?</span>
-                <button @click="deleteDevice(device.deviceId)" class="text-red-600 hover:text-red-800 text-[11px] font-medium mr-1">Yes</button>
-                <button @click="deleteConfirmId = ''" class="text-gray-500 hover:text-gray-700 text-[11px] font-medium">No</button>
-              </template>
-              <button
-                v-else
-                @click="deleteConfirmId = device.deviceId"
-                class="opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"
-                title="Delete device"
-              >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
+              <div class="flex items-center justify-end gap-1">
+                <!-- View SMS -->
+                <button
+                  @click="viewSms(device)"
+                  class="opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-blue-50 text-gray-300 hover:text-blue-600"
+                  title="View SMS"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                </button>
+                <!-- Delete -->
+                <template v-if="authStore.isAdmin">
+                  <template v-if="deleteConfirmId === device.deviceId">
+                    <span class="text-[11px] text-gray-500 mr-1">Delete?</span>
+                    <button @click="deleteDevice(device.deviceId)" class="text-red-600 hover:text-red-800 text-[11px] font-medium mr-1">Yes</button>
+                    <button @click="deleteConfirmId = ''" class="text-gray-500 hover:text-gray-700 text-[11px] font-medium">No</button>
+                  </template>
+                  <button
+                    v-else
+                    @click="deleteConfirmId = device.deviceId"
+                    class="opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"
+                    title="Delete device"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </template>
+              </div>
             </td>
           </tr>
           <tr v-if="devices.length === 0">
             <td colspan="7" class="px-6 py-12 text-center">
               <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-              <p class="text-sm text-gray-400">No devices registered</p>
+              <p class="text-sm text-gray-400">No devices found</p>
             </td>
           </tr>
         </tbody>

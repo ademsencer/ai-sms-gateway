@@ -20,16 +20,37 @@ export interface RegisterDeviceResult {
   apiKey: string;
 }
 
+interface DeviceListResponse {
+  data: Device[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface DeviceFilters {
+  search?: string;
+  status?: string;
+}
+
 export const useDeviceStore = defineStore('device', () => {
   const devices = ref<Device[]>([]);
+  const total = ref(0);
+  const totalPages = ref(1);
   const loading = ref(false);
   const apiKeys = reactive<Record<string, string>>({});
   const { get, post } = useApi();
 
-  async function fetchDevices() {
+  async function fetchDevices(page = 1, limit = 20, filters?: DeviceFilters) {
     loading.value = true;
     try {
-      devices.value = await get<Device[]>('/device');
+      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (filters?.search) params.set('search', filters.search);
+      if (filters?.status) params.set('status', filters.status);
+      const result = await get<DeviceListResponse>(`/device?${params}`);
+      devices.value = result.data;
+      total.value = result.total;
+      totalPages.value = result.totalPages;
     } finally {
       loading.value = false;
     }
@@ -53,5 +74,5 @@ export const useDeviceStore = defineStore('device', () => {
     fetchDevices();
   }
 
-  return { devices, loading, apiKeys, fetchDevices, regenerateKey, updateDeviceStatus, handleDeviceRegistered };
+  return { devices, total, totalPages, loading, apiKeys, fetchDevices, regenerateKey, updateDeviceStatus, handleDeviceRegistered };
 });

@@ -12,10 +12,16 @@ export class AuditController {
 
   @Get()
   @Roles('admin')
-  async listAuditLogs(@Query('page') page?: string, @Query('limit') limit?: string) {
+  async listAuditLogs(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('action') action?: string,
+    @Query('search') search?: string,
+  ) {
     const result = await this.auditService.findAll(
       page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 50,
+      Math.min(500, limit ? parseInt(limit) : 20),
+      { action, search },
     );
     return ApiResponseDto.ok(result);
   }

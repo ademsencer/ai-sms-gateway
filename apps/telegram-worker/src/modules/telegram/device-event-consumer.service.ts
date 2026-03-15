@@ -21,6 +21,11 @@ export class DeviceEventConsumerService implements OnModuleInit {
   private async handleEvent(raw: Record<string, unknown>): Promise<void> {
     const event = raw as unknown as DeviceLifecycleEvent;
 
+    // Skip heartbeat events — they flood Telegram with notifications
+    if (event.eventType === 'heartbeat') {
+      return;
+    }
+
     this.logger.log(`Device event: ${event.deviceId} — ${event.eventType}`);
     await this.telegram.sendDeviceNotification(event);
   }

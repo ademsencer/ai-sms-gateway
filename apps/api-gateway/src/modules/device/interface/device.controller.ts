@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, Req, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, Query, Req, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiSecurity } from '@nestjs/swagger';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -152,14 +152,44 @@ export class DeviceController {
 
   @Get('/')
   @Public()
-  @ApiOperation({ summary: 'List all devices', description: 'Returns all registered devices with their current status.' })
-  @ApiResponse({ status: 200, description: 'List of devices' })
-  async listDevices(): Promise<ApiResponseDto<DeviceResponseDto[]>> {
-    const devices = await this.prisma.device.findMany({
-      orderBy: { lastSeen: 'desc' },
-    });
+  @ApiOperation({ summary: 'List devices', description: 'Returns paginated devices with optional filters.' })
+  @ApiResponse({ status: 200, description: 'Paginated list of devices' })
+  async listDevices(
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+  ): Promise<ApiResponseDto<{ data: DeviceResponseDto[]; total: number; page: number; limit: number; totalPages: number }>> {
+    const page = Math.max(1, parseInt(pageStr || '1', 10) || 1);
+    const limit = Math.min(500, Math.max(1, parseInt(limitStr || '20', 10) || 20));
+    const skip = (page - 1) * limit;
 
-    const result: DeviceResponseDto[] = devices.map((d) => ({
+    const where: Record<string, unknown> = {};
+
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { ownerName: { contains: search } },
+        { iban: { contains: search } },
+        { deviceId: { contains: search } },
+        { model: { contains: search } },
+      ];
+    }
+
+    const [devices, total] = await Promise.all([
+      this.prisma.device.findMany({
+        where,
+        orderBy: { lastSeen: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.device.count({ where }),
+    ]);
+
+    const data: DeviceResponseDto[] = devices.map((d) => ({
       id: d.id,
       deviceId: d.deviceId,
       ownerName: d.ownerName,
@@ -172,7 +202,7 @@ export class DeviceController {
       createdAt: d.createdAt.toISOString(),
     }));
 
-    return ApiResponseDto.ok(result);
+    return ApiResponseDto.ok({ data, total, page, limit, totalPages: Math.ceil(total / limit) });
   }
 
   @Patch(':deviceId')

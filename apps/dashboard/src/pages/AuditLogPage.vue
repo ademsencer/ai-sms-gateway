@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useApi } from '@/composables/useApi';
+import TablePagination from '@/components/shared/TablePagination.vue';
+import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal.vue';
 
 interface AuditEntry {
   id: string;
@@ -18,16 +20,25 @@ const logs = ref<AuditEntry[]>([]);
 const total = ref(0);
 const totalPages = ref(1);
 const page = ref(1);
+const pageSize = ref(20);
 const loading = ref(false);
 const showClearConfirm = ref(false);
 const deleting = ref<string | null>(null);
 const expandedRow = ref<string | null>(null);
 
+// Filters
+const filterAction = ref('all');
+const filterSearch = ref('');
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
 async function loadPage(p: number) {
   page.value = p;
   loading.value = true;
   try {
-    const result = await get<{ data: AuditEntry[]; total: number; page: number; limit: number; totalPages: number }>(`/audit?page=${p}&limit=50`);
+    const params = new URLSearchParams({ page: String(p), limit: String(pageSize.value) });
+    if (filterAction.value !== 'all') params.set('action', filterAction.value);
+    if (filterSearch.value) params.set('search', filterSearch.value);
+    const result = await get<{ data: AuditEntry[]; total: number; page: number; limit: number; totalPages: number }>(`/audit?${params}`);
     logs.value = result.data;
     total.value = result.total;
     totalPages.value = result.totalPages;
@@ -36,8 +47,15 @@ async function loadPage(p: number) {
   }
 }
 
+function onSearchChange() {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    page.value = 1;
+    loadPage(1);
+  }, 400);
+}
+
 async function deleteEntry(id: string) {
-  if (!confirm('Delete this audit log entry?')) return;
   deleting.value = id;
   try {
     await del(`/audit/${id}`);
@@ -56,6 +74,12 @@ async function clearAll() {
   } finally {
     loading.value = false;
   }
+}
+
+function onPageSizeChange(size: number) {
+  pageSize.value = size;
+  page.value = 1;
+  loadPage(1);
 }
 
 function toggleRow(id: string) {
@@ -95,7 +119,6 @@ function actionIcon(action: string): string {
   return 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 }
 
-/** Parse details string — try JSON, fallback to plain text */
 function parseDetails(details: string | null): { type: 'json'; data: Record<string, unknown> } | { type: 'text'; data: string } | null {
   if (!details) return null;
   try {
@@ -136,6 +159,12 @@ function formatKey(key: string): string {
 }
 
 onMounted(() => loadPage(1));
+
+watch(filterSearch, () => onSearchChange());
+watch(filterAction, () => {
+  page.value = 1;
+  loadPage(1);
+});
 </script>
 
 <template>
@@ -147,7 +176,6 @@ onMounted(() => loadPage(1));
         <p class="text-sm text-gray-500 mt-1">Track all user actions and system events</p>
       </div>
       <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-400 tabular-nums">{{ total.toLocaleString() }} entries</span>
         <button @click="loadPage(page)" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-700 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           Refresh
@@ -163,29 +191,41 @@ onMounted(() => loadPage(1));
       </div>
     </div>
 
-    <!-- Clear All Confirmation Modal -->
-    <Teleport to="body">
-      <div v-if="showClearConfirm" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Clear All Audit Logs</h3>
-              <p class="text-sm text-gray-500">This action cannot be undone</p>
-            </div>
-          </div>
-          <p class="text-sm text-gray-600 mb-6">
-            You are about to permanently delete <strong class="text-gray-900">{{ total.toLocaleString() }} audit log entries</strong>.
-          </p>
-          <div class="flex justify-end gap-3">
-            <button @click="showClearConfirm = false" class="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-            <button @click="clearAll" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">Delete All</button>
-          </div>
+    <!-- Filters -->
+    <div class="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex-1 min-w-[200px]">
+          <input
+            v-model="filterSearch"
+            type="text"
+            placeholder="Search user, target, or details..."
+            class="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          />
         </div>
+        <select
+          v-model="filterAction"
+          class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
+        >
+          <option value="all">All Actions</option>
+          <option value="login">Login</option>
+          <option value="logout">Logout</option>
+          <option value="register_device">Register Device</option>
+          <option value="delete_device">Delete Device</option>
+          <option value="delete_sms">Delete SMS</option>
+          <option value="clear_all_sms">Clear All SMS</option>
+          <option value="delete_audit_log">Delete Audit Log</option>
+          <option value="clear_all_audit_logs">Clear All Audit Logs</option>
+        </select>
       </div>
-    </Teleport>
+    </div>
+
+    <DeleteConfirmModal
+      :show="showClearConfirm"
+      title="Clear All Audit Logs"
+      :message="`You are about to permanently delete <strong>${total.toLocaleString()} audit log entries</strong>.`"
+      @confirm="clearAll"
+      @cancel="showClearConfirm = false"
+    />
 
     <!-- Table -->
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -249,7 +289,7 @@ onMounted(() => loadPage(1));
                     class="opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 disabled:opacity-50"
                     title="Delete"
                   >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </td>
               </tr>
@@ -257,7 +297,6 @@ onMounted(() => loadPage(1));
               <tr v-if="expandedRow === log.id && log.details">
                 <td colspan="6" class="px-4 py-0">
                   <div class="py-3 pl-4 border-l-2 border-blue-200 ml-2 mb-2">
-                    <!-- JSON key-value display -->
                     <template v-if="isJsonDetails(log.details)">
                       <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 max-h-48 overflow-y-auto pr-2">
                         <template v-for="(val, key) in getJsonData(log.details)" :key="key">
@@ -266,7 +305,6 @@ onMounted(() => loadPage(1));
                         </template>
                       </div>
                     </template>
-                    <!-- Plain text display -->
                     <template v-else>
                       <p class="text-xs text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">{{ log.details }}</p>
                     </template>
@@ -277,7 +315,7 @@ onMounted(() => loadPage(1));
             <tr v-if="!loading && logs.length === 0">
               <td colspan="6" class="px-6 py-12 text-center">
                 <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                <p class="text-sm text-gray-400">No audit logs yet</p>
+                <p class="text-sm text-gray-400">No audit logs found</p>
               </td>
             </tr>
           </tbody>
@@ -285,25 +323,13 @@ onMounted(() => loadPage(1));
       </div>
     </div>
 
-    <!-- Pagination -->
-    <div class="mt-4 flex items-center justify-between">
-      <button
-        :disabled="page <= 1"
-        @click="loadPage(page - 1)"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-        Previous
-      </button>
-      <span class="text-xs text-gray-400">Page {{ page }} of {{ totalPages }}</span>
-      <button
-        :disabled="page >= totalPages"
-        @click="loadPage(page + 1)"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-      >
-        Next
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-      </button>
-    </div>
+    <TablePagination
+      :page="page"
+      :total-pages="totalPages"
+      :total="total"
+      :page-size="pageSize"
+      @update:page="loadPage"
+      @update:page-size="onPageSizeChange"
+    />
   </div>
 </template>

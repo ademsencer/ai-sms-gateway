@@ -106,9 +106,46 @@ export class SmsController {
     }>
   > {
     const page = query.page || 1;
-    const limit = query.limit || 50;
+    const limit = query.limit || 20;
 
-    const where = query.deviceId ? { deviceId: query.deviceId } : {};
+    // Build where clause with filters
+    const where: Record<string, unknown> = {};
+
+    if (query.deviceId) {
+      where.deviceId = query.deviceId;
+    }
+
+    // Filter by ownerName or iban via device relation
+    if (query.ownerName || query.iban) {
+      // Find matching device IDs first
+      const deviceWhere: Record<string, unknown> = {};
+      if (query.ownerName) {
+        deviceWhere.ownerName = { contains: query.ownerName };
+      }
+      if (query.iban) {
+        deviceWhere.iban = { contains: query.iban };
+      }
+      const matchingDevices = await this.prisma.device.findMany({
+        where: deviceWhere,
+        select: { deviceId: true },
+      });
+      const deviceIds = matchingDevices.map((d) => d.deviceId);
+      // Combine with existing deviceId filter
+      if (query.deviceId) {
+        where.deviceId = deviceIds.includes(query.deviceId) ? query.deviceId : '__no_match__';
+      } else {
+        where.deviceId = { in: deviceIds };
+      }
+    }
+
+    // Text search in sender or message
+    if (query.search) {
+      where.OR = [
+        { sender: { contains: query.search } },
+        { message: { contains: query.search } },
+      ];
+    }
+
     const skip = (page - 1) * limit;
 
     const [messages, total] = await Promise.all([

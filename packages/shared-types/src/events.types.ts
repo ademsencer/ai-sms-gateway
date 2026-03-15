@@ -28,7 +28,7 @@ export interface SmsReceivedEvent {
   receivedAt: string;
 }
 
-export type DeviceEventType = 'connected' | 'disconnected' | 'error' | 'heartbeat_lost';
+export type DeviceEventType = 'connected' | 'disconnected' | 'error' | 'heartbeat' | 'heartbeat_lost';
 
 export interface DeviceLifecycleEvent {
   deviceId: string;

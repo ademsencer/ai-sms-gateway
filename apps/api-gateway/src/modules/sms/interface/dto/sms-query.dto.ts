@@ -10,16 +10,31 @@ export class SmsQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ default: 50 })
+  @ApiPropertyOptional({ default: 20 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  @Max(100)
-  limit?: number = 50;
+  @Max(500)
+  limit?: number = 20;
 
   @ApiPropertyOptional({ description: 'Filter by device ID' })
   @IsOptional()
   @IsString()
   deviceId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by owner name (partial match)' })
+  @IsOptional()
+  @IsString()
+  ownerName?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by IBAN (partial match)' })
+  @IsOptional()
+  @IsString()
+  iban?: string;
+
+  @ApiPropertyOptional({ description: 'Search in sender or message text' })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

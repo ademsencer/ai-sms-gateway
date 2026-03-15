@@ -20,20 +20,32 @@ interface SmsListResponse {
   totalPages: number;
 }
 
+export interface SmsFilters {
+  deviceId?: string;
+  ownerName?: string;
+  iban?: string;
+  search?: string;
+}
+
 export const useSmsStore = defineStore('sms', () => {
   const messages = ref<SmsMessage[]>([]);
   const total = ref(0);
+  const totalPages = ref(1);
   const loading = ref(false);
   const { get } = useApi();
 
-  async function fetchMessages(page = 1, limit = 50, deviceId?: string) {
+  async function fetchMessages(page = 1, limit = 20, filters?: SmsFilters) {
     loading.value = true;
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-      if (deviceId) params.set('deviceId', deviceId);
+      if (filters?.deviceId) params.set('deviceId', filters.deviceId);
+      if (filters?.ownerName) params.set('ownerName', filters.ownerName);
+      if (filters?.iban) params.set('iban', filters.iban);
+      if (filters?.search) params.set('search', filters.search);
       const result = await get<SmsListResponse>(`/sms?${params}`);
       messages.value = result.data;
       total.value = result.total;
+      totalPages.value = result.totalPages;
     } finally {
       loading.value = false;
     }
@@ -44,5 +56,5 @@ export const useSmsStore = defineStore('sms', () => {
     total.value++;
   }
 
-  return { messages, total, loading, fetchMessages, addMessage };
+  return { messages, total, totalPages, loading, fetchMessages, addMessage };
 });
