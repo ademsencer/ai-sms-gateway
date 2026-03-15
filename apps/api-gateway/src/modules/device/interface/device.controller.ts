@@ -40,26 +40,39 @@ export class DeviceController {
       where: { deviceId: dto.deviceId },
     });
 
-    if (existing) {
-      return ApiResponseDto.fail<RegisterDeviceResponseDto>('Device already registered');
-    }
-
     const apiKey = uuidv4();
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
 
-    const created = await this.prisma.device.create({
-      data: {
-        deviceId: dto.deviceId,
-        apiKeyHash,
-        ownerName: dto.ownerName,
-        iban: dto.iban,
-        androidVersion: dto.androidVersion,
-        model: dto.model,
-        serialNumber: dto.serialNumber,
-      },
-    });
-
-    this.logger.log(`Device registered: ${dto.deviceId} — model: ${dto.model}, android: ${dto.androidVersion}`);
+    let created;
+    if (existing) {
+      // Re-register: update device info and generate new API key
+      created = await this.prisma.device.update({
+        where: { deviceId: dto.deviceId },
+        data: {
+          apiKeyHash,
+          ownerName: dto.ownerName,
+          iban: dto.iban,
+          androidVersion: dto.androidVersion,
+          model: dto.model,
+          serialNumber: dto.serialNumber,
+          status: 'offline',
+        },
+      });
+      this.logger.log(`Device re-registered: ${dto.deviceId} — model: ${dto.model}, android: ${dto.androidVersion}`);
+    } else {
+      created = await this.prisma.device.create({
+        data: {
+          deviceId: dto.deviceId,
+          apiKeyHash,
+          ownerName: dto.ownerName,
+          iban: dto.iban,
+          androidVersion: dto.androidVersion,
+          model: dto.model,
+          serialNumber: dto.serialNumber,
+        },
+      });
+      this.logger.log(`Device registered: ${dto.deviceId} — model: ${dto.model}, android: ${dto.androidVersion}`);
+    }
 
     // Publish Redis event for real-time dashboard update
     await this.redis.publish('device:registered', {

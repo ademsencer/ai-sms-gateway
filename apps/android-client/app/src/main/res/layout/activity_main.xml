@@ -185,16 +185,35 @@
                 android:enabled="false" />
         </LinearLayout>
 
-        <!-- Test SMS Button -->
-        <Button
-            android:id="@+id/btnTestSms"
+        <!-- Test SMS & Reinstall Buttons -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="12dp"
-            android:text="Test SMS"
-            android:backgroundTint="#7C3AED"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp">
+
+            <Button
+                android:id="@+id/btnTestSms"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Test SMS"
+                android:backgroundTint="#7C3AED"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:layout_marginEnd="6dp" />
+
+            <Button
+                android:id="@+id/btnReinstall"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Reinstall"
+                android:backgroundTint="#D97706"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
 
         <!-- Permission & Diagnostics Card -->
         <androidx.cardview.widget.CardView

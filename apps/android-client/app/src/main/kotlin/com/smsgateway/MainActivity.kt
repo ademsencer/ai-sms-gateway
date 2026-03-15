@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvPermissionStatus: TextView
     private lateinit var tvDiagnostics: TextView
     private lateinit var btnTestSms: Button
+    private lateinit var btnReinstall: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,11 +65,13 @@ class MainActivity : AppCompatActivity() {
         tvPermissionStatus = findViewById(R.id.tvPermissionStatus)
         tvDiagnostics = findViewById(R.id.tvDiagnostics)
         btnTestSms = findViewById(R.id.btnTestSms)
+        btnReinstall = findViewById(R.id.btnReinstall)
 
         btnRegister.setOnClickListener { registerDevice() }
         btnStart.setOnClickListener { startGatewayService() }
         btnStop.setOnClickListener { stopGatewayService() }
         btnTestSms.setOnClickListener { testSmsForwarding() }
+        btnReinstall.setOnClickListener { reinstallDevice() }
 
         // Show app version
         val tvVersion = findViewById<TextView>(R.id.tvVersion)
@@ -340,6 +343,141 @@ class MainActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     btnTestSms.isEnabled = true
                     btnTestSms.text = "Test SMS"
+                }
+            }
+        }
+    }
+
+    // ─── Reinstall (Re-register) Device ────────────────────────────────
+
+    /**
+     * Re-registers the device with the server.
+     * Stops service, clears credentials, and re-registers using existing ownerName/iban.
+     * The server upserts: if deviceId exists, it updates and generates a new API key.
+     */
+    private fun reinstallDevice() {
+        if (!prefs.isConfigured) {
+            Toast.makeText(this, "Cihaz henüz kayıtlı değil, önce Register yapın", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Build a dialog with editable ownerName and IBAN fields
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 16)
+        }
+
+        val labelName = TextView(this).apply {
+            text = "Ad Soyad"
+            textSize = 12f
+            setTextColor(0xFF888888.toInt())
+        }
+        val inputName = EditText(this).apply {
+            setText(prefs.ownerName)
+            hint = "Ad Soyad giriniz"
+            inputType = android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+            setPadding(24, 24, 24, 24)
+            setBackgroundColor(0xFFEEEEEE.toInt())
+        }
+
+        val spacer = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 24
+            )
+        }
+
+        val labelIban = TextView(this).apply {
+            text = "IBAN"
+            textSize = 12f
+            setTextColor(0xFF888888.toInt())
+        }
+        val inputIban = EditText(this).apply {
+            setText(prefs.iban)
+            hint = "TR..."
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            isAllCaps = true
+            setPadding(24, 24, 24, 24)
+            setBackgroundColor(0xFFEEEEEE.toInt())
+        }
+
+        layout.addView(labelName)
+        layout.addView(inputName)
+        layout.addView(spacer)
+        layout.addView(labelIban)
+        layout.addView(inputIban)
+
+        AlertDialog.Builder(this)
+            .setTitle("Reinstall")
+            .setMessage("Bilgileri güncelleyip yeniden kayıt edin. Yeni API anahtarı oluşturulacak.")
+            .setView(layout)
+            .setPositiveButton("Reinstall") { _, _ ->
+                val newName = inputName.text.toString().trim()
+                val newIban = inputIban.text.toString().trim().uppercase()
+
+                if (newName.length < 2) {
+                    Toast.makeText(this, "Ad Soyad en az 2 karakter olmalı", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                if (newIban.length < 15) {
+                    Toast.makeText(this, "Geçerli bir IBAN giriniz", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                performReinstall(newName, newIban)
+            }
+            .setNegativeButton("İptal") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun performReinstall(ownerName: String, iban: String) {
+        // Stop service if running
+        if (prefs.serviceEnabled) {
+            prefs.serviceEnabled = false
+            stopService(Intent(this, SmsForwardService::class.java))
+        }
+
+        btnReinstall.isEnabled = false
+        btnReinstall.text = "Reinstalling..."
+
+        GatewayApi.initialize(prefs.apiUrl)
+
+        scope.launch {
+            try {
+                val payload = RegisterDevicePayload(
+                    deviceId = prefs.deviceId,
+                    ownerName = ownerName,
+                    iban = iban,
+                    androidVersion = Build.VERSION.RELEASE,
+                    model = "${Build.MANUFACTURER} ${Build.MODEL}",
+                    serialNumber = Build.SERIAL.takeIf { it != Build.UNKNOWN } ?: Build.FINGERPRINT.takeLast(32)
+                )
+
+                val response = withContext(Dispatchers.IO) {
+                    GatewayApi.getService().registerDevice(payload)
+                }
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val apiKey = response.body()?.data?.apiKey ?: ""
+                    prefs.apiKey = apiKey
+                    prefs.ownerName = ownerName
+                    prefs.iban = iban
+                    Toast.makeText(this@MainActivity, "✓ Reinstall başarılı! Yeni API key alındı.", Toast.LENGTH_LONG).show()
+                    Log.i(tag, "Device reinstalled successfully — name=$ownerName, new API key received")
+                    updateUI()
+                } else {
+                    val msg = response.body()?.message ?: "Reinstall failed (${response.code()})"
+                    Toast.makeText(this@MainActivity, "✗ $msg", Toast.LENGTH_LONG).show()
+                    Log.e(tag, "Reinstall failed: $msg")
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "Reinstall error: ${e.message}", e)
+                Toast.makeText(this@MainActivity, "✗ Bağlantı hatası: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                withContext(Dispatchers.Main) {
+                    btnReinstall.isEnabled = true
+                    btnReinstall.text = "Reinstall"
                 }
             }
         }
