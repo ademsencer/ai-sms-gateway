@@ -3,6 +3,7 @@ package com.smsgateway
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.PowerManager
 import android.provider.Telephony
 import android.util.Log
 import com.smsgateway.api.GatewayApi
@@ -27,6 +28,16 @@ class SmsReceiver : BroadcastReceiver() {
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         if (messages.isNullOrEmpty()) return
 
+        // Extend broadcast lifecycle (up to 60s instead of default 10s)
+        val pendingResult = goAsync()
+
+        // Acquire WakeLock to keep CPU alive during HTTP request
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = pm.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "SmsGateway::SmsReceiver"
+        ).apply { acquire(30_000) } // 30 second timeout
+
         // Group message parts by sender
         val grouped = mutableMapOf<String, StringBuilder>()
         for (msg in messages) {
@@ -34,31 +45,41 @@ class SmsReceiver : BroadcastReceiver() {
             grouped.getOrPut(sender) { StringBuilder() }.append(msg.displayMessageBody ?: "")
         }
 
-        for ((sender, body) in grouped) {
-            val payload = SmsPayload(
-                deviceId = prefs.deviceId,
-                sender = sender,
-                message = body.toString(),
-                timestamp = System.currentTimeMillis() / 1000
-            )
+        scope.launch {
+            try {
+                for ((sender, body) in grouped) {
+                    val payload = SmsPayload(
+                        deviceId = prefs.deviceId,
+                        sender = sender,
+                        message = body.toString(),
+                        timestamp = System.currentTimeMillis() / 1000
+                    )
 
-            Log.d(tag, "SMS received from $sender: ${body.toString().take(50)}...")
+                    Log.d(tag, "SMS received from $sender: ${body.toString().take(50)}...")
 
-            scope.launch {
-                try {
-                    GatewayApi.initialize(prefs.apiUrl)
-                    val response = GatewayApi.getService().sendSms(prefs.apiKey, payload)
+                    // Mark as processed for ContentObserver dedup
+                    SmsDedup.markProcessed(context, sender, body.toString())
 
-                    if (response.isSuccessful) {
-                        Log.d(tag, "SMS forwarded successfully")
-                    } else {
-                        Log.w(tag, "API returned ${response.code()}, queueing for retry")
+                    try {
+                        GatewayApi.initialize(prefs.apiUrl)
+                        val response = GatewayApi.getService().sendSms(prefs.apiKey, payload)
+
+                        if (response.isSuccessful) {
+                            Log.d(tag, "SMS forwarded successfully")
+                        } else {
+                            Log.w(tag, "API returned ${response.code()}, queueing for retry")
+                            SmsQueue(context).enqueue(payload, prefs.apiKey)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(tag, "Failed to forward SMS: ${e.message}")
                         SmsQueue(context).enqueue(payload, prefs.apiKey)
                     }
-                } catch (e: Exception) {
-                    Log.e(tag, "Failed to forward SMS: ${e.message}")
-                    SmsQueue(context).enqueue(payload, prefs.apiKey)
                 }
+            } finally {
+                // Release WakeLock
+                if (wakeLock.isHeld) wakeLock.release()
+                // Finish async broadcast
+                pendingResult.finish()
             }
         }
     }

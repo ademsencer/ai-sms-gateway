@@ -3,8 +3,11 @@ package com.smsgateway
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -126,6 +129,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // Request battery optimization exemption (critical for TECNO, Xiaomi, etc.)
+        requestBatteryOptimizationExemption()
+
         GatewayApi.initialize(prefs.apiUrl)
         prefs.serviceEnabled = true
 
@@ -138,6 +144,30 @@ class MainActivity : AppCompatActivity() {
 
         updateUI()
         Toast.makeText(this, "SMS forwarding started", Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Request exemption from battery optimization.
+     * Critical for devices with aggressive battery management
+     * (TECNO HiOS, Xiaomi MIUI, Huawei EMUI, OPPO ColorOS, etc.)
+     */
+    private fun requestBatteryOptimizationExemption() {
+        try {
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            // Some devices may not support this intent
+            Toast.makeText(
+                this,
+                "Please disable battery optimization for this app manually in Settings",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun stopGatewayService() {
