@@ -19,7 +19,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: AppPreferences
     private val permissionRequestCode = 1001
 
-    private lateinit var tvApiUrl: TextView
     private lateinit var tvDeviceId: TextView
     private lateinit var etApiKey: EditText
     private lateinit var tvStatus: TextView
@@ -33,7 +32,6 @@ class MainActivity : AppCompatActivity() {
 
         prefs = AppPreferences(this)
 
-        tvApiUrl = findViewById(R.id.tvApiUrl)
         tvDeviceId = findViewById(R.id.tvDeviceId)
         etApiKey = findViewById(R.id.etApiKey)
         tvStatus = findViewById(R.id.tvStatus)
@@ -41,8 +39,7 @@ class MainActivity : AppCompatActivity() {
         btnStop = findViewById(R.id.btnStop)
         btnSave = findViewById(R.id.btnSave)
 
-        // Display auto-generated values (read-only)
-        tvApiUrl.text = prefs.apiUrl
+        // Display device ID (read-only)
         tvDeviceId.text = prefs.deviceId
 
         // Load saved API key

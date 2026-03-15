@@ -9,9 +9,8 @@ class AppPreferences(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("sms_gateway_prefs", Context.MODE_PRIVATE)
 
-    var apiUrl: String
-        get() = prefs.getString("api_url", BuildConfig.API_URL) ?: BuildConfig.API_URL
-        set(value) = prefs.edit().putString("api_url", value).apply()
+    val apiUrl: String
+        get() = BuildConfig.API_URL
 
     var deviceId: String
         get() {
