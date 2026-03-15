@@ -56,7 +56,8 @@ data class EventResult(
 
 data class HealthResponse(
     @SerializedName("status") val status: String,
-    @SerializedName("version") val version: String
+    @SerializedName("version") val version: String,
+    @SerializedName("apkUrl") val apkUrl: String? = null
 )
 
 interface GatewayApiService {

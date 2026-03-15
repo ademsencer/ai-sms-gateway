@@ -10,10 +10,11 @@ import android.widget.LinearLayout
 import androidx.core.content.FileProvider
 import com.smsgateway.api.GatewayApi
 import kotlinx.coroutines.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.concurrent.TimeUnit
 
 object AppUpdater {
     private const val TAG = "AppUpdater"
@@ -31,12 +32,14 @@ object AppUpdater {
                     return@launch
                 }
 
-                val serverVersion = response.body()?.version ?: return@launch
-                Log.i(TAG, "Current: $currentVersion, Server: $serverVersion")
+                val health = response.body() ?: return@launch
+                val serverVersion = health.version
+                val apkUrl = health.apkUrl
+                Log.i(TAG, "Current: $currentVersion, Server: $serverVersion, APK: $apkUrl")
 
                 if (isNewerVersion(serverVersion, currentVersion)) {
                     withContext(Dispatchers.Main) {
-                        showUpdateDialog(activity, apiUrl, serverVersion)
+                        showUpdateDialog(activity, apkUrl, serverVersion)
                     }
                 } else {
                     Log.i(TAG, "App is up to date")
@@ -64,12 +67,12 @@ object AppUpdater {
         return false
     }
 
-    private fun showUpdateDialog(activity: Activity, apiUrl: String, newVersion: String) {
+    private fun showUpdateDialog(activity: Activity, apkUrl: String?, newVersion: String) {
         AlertDialog.Builder(activity)
             .setTitle("Güncelleme Mevcut")
             .setMessage("Yeni sürüm v$newVersion yüklenmeye hazır.\n\nMevcut sürüm: v${BuildConfig.VERSION_NAME}\n\nGüncellemek ister misiniz?")
             .setPositiveButton("Güncelle") { _, _ ->
-                downloadAndInstall(activity, apiUrl, newVersion)
+                downloadAndInstall(activity, apkUrl, newVersion)
             }
             .setNegativeButton("Sonra") { dialog, _ ->
                 dialog.dismiss()
@@ -78,7 +81,7 @@ object AppUpdater {
             .show()
     }
 
-    private fun downloadAndInstall(activity: Activity, apiUrl: String, version: String) {
+    private fun downloadAndInstall(activity: Activity, apkUrl: String?, version: String) {
         val progressLayout = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 32, 48, 32)
@@ -109,23 +112,29 @@ object AppUpdater {
 
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
-                // APK is served from nginx on port 80, not the API port
-                val baseUrl = apiUrl.replace(Regex(":\\d+/?$"), "/")
-                val url = URL("${baseUrl}downloads/sms-gateway-latest.apk")
+                val downloadUrl = apkUrl ?: throw Exception("APK URL not available from server")
 
-                Log.i(TAG, "Downloading APK from: $url")
+                Log.i(TAG, "Downloading APK from: $downloadUrl")
 
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 30000
-                connection.readTimeout = 60000
-                connection.connect()
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(120, TimeUnit.SECONDS)
+                    .build()
 
-                val totalSize = connection.contentLength
+                val request = Request.Builder().url(downloadUrl).build()
+                val response = client.newCall(request).execute()
+
+                if (!response.isSuccessful) {
+                    throw Exception("HTTP ${response.code}")
+                }
+
+                val body = response.body ?: throw Exception("Empty response body")
+                val totalSize = body.contentLength()
                 val updateDir = File(activity.getExternalFilesDir(null), "updates")
                 updateDir.mkdirs()
                 val apkFile = File(updateDir, "sms-gateway-v$version.apk")
 
-                connection.inputStream.use { input ->
+                body.byteStream().use { input ->
                     FileOutputStream(apkFile).use { output ->
                         val buffer = ByteArray(8192)
                         var downloaded = 0L

@@ -1,8 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Public } from '@shared/decorators/public.decorator';
 import { PrismaService } from '@infrastructure/database';
 import { RedisService } from '@infrastructure/redis';
+import { Request } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -27,9 +28,10 @@ export class HealthController {
   @Get()
   @Public()
   @ApiOperation({ summary: 'Health check', description: 'Returns service health status.' })
-  async check(): Promise<{
+  async check(@Req() req: Request): Promise<{
     status: string;
     version: string;
+    apkUrl: string;
     timestamp: string;
     services: Record<string, string>;
   }> {
@@ -53,9 +55,15 @@ export class HealthController {
 
     const allHealthy = Object.values(services).every((s) => s === 'healthy');
 
+    // Build APK download URL from request origin
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers['host'] || 'localhost';
+    const apkUrl = `${proto}://${host}/downloads/sms-gateway-latest.apk`;
+
     return {
       status: allHealthy ? 'healthy' : 'degraded',
       version: this.version,
+      apkUrl,
       timestamp: new Date().toISOString(),
       services,
     };
