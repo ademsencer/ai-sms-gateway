@@ -106,12 +106,12 @@ watch([filterDeviceId, filterOwnerName, filterIban, filterSearch], () => {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">SMS Logs</h1>
-        <p class="text-sm text-gray-500 mt-1">All received and forwarded SMS messages</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-800">SMS Logs</h1>
+        <p class="text-xs sm:text-sm text-gray-500 mt-1">All received and forwarded SMS messages</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
         <button
           @click="loadPage(1)"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-700 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
@@ -131,9 +131,9 @@ watch([filterDeviceId, filterOwnerName, filterIban, filterSearch], () => {
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="flex-1 min-w-[180px]">
+    <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 mb-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-2 sm:gap-3">
+        <div class="sm:col-span-2 lg:flex-1 lg:min-w-[180px]">
           <input
             v-model="filterSearch"
             type="text"
@@ -141,7 +141,7 @@ watch([filterDeviceId, filterOwnerName, filterIban, filterSearch], () => {
             class="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        <div class="min-w-[160px]">
+        <div>
           <input
             v-model="filterDeviceId"
             type="text"
@@ -149,7 +149,7 @@ watch([filterDeviceId, filterOwnerName, filterIban, filterSearch], () => {
             class="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 font-mono text-xs"
           />
         </div>
-        <div class="min-w-[180px]">
+        <div>
           <input
             v-model="filterOwnerName"
             type="text"
@@ -157,7 +157,7 @@ watch([filterDeviceId, filterOwnerName, filterIban, filterSearch], () => {
             class="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        <div class="min-w-[160px]">
+        <div>
           <input
             v-model="filterIban"
             type="text"

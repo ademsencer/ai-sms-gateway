@@ -139,8 +139,8 @@ onMounted(fetchUsers);
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Users</h1>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Users</h1>
       <button
         @click="showCreateForm = !showCreateForm"
         class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"

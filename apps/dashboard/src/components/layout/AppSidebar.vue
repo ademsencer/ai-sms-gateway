@@ -7,6 +7,8 @@ const route = useRoute();
 const authStore = useAuthStore();
 const appVersion = ref('');
 
+const emit = defineEmits<{ navigate: [] }>();
+
 const mainNavItems = [
   { path: '/', label: 'Overview', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
   { path: '/devices', label: 'Devices', icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z' },
@@ -36,10 +38,14 @@ onMounted(async () => {
     // Silently fail — version is optional
   }
 });
+
+function onNav() {
+  emit('navigate');
+}
 </script>
 
 <template>
-  <aside class="w-64 bg-gray-900 text-white flex flex-col">
+  <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0">
     <div class="p-6">
       <h1 class="text-xl font-bold">SMS Gateway</h1>
       <div class="flex items-center gap-2 mt-1">
@@ -54,8 +60,9 @@ onMounted(async () => {
         :to="item.path"
         class="flex items-center gap-3 px-4 py-3 rounded-lg mb-1 text-sm transition-colors"
         :class="route.path === item.path ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-800'"
+        @click="onNav"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
         </svg>
         {{ item.label }}
@@ -69,7 +76,7 @@ onMounted(async () => {
         :download="apkDownloadName"
         class="flex items-center gap-3 px-4 py-3 rounded-lg mb-1 text-sm transition-colors text-green-400 hover:bg-gray-800"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
         <span>
@@ -83,8 +90,9 @@ onMounted(async () => {
         :to="item.path"
         class="flex items-center gap-3 px-4 py-3 rounded-lg mb-1 text-sm transition-colors"
         :class="route.path === item.path ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-800'"
+        @click="onNav"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
         </svg>
         {{ item.label }}

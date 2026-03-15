@@ -78,7 +78,8 @@ function viewSms(device: Device) {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+  <!-- Desktop Table -->
+  <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full">
         <thead>
@@ -155,7 +156,6 @@ function viewSms(device: Device) {
             </td>
             <td class="px-4 py-3 text-right">
               <div class="flex items-center justify-end gap-1">
-                <!-- View SMS -->
                 <button
                   @click="viewSms(device)"
                   class="opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-blue-50 text-gray-300 hover:text-blue-600"
@@ -163,7 +163,6 @@ function viewSms(device: Device) {
                 >
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 </button>
-                <!-- Delete -->
                 <template v-if="authStore.isAdmin">
                   <template v-if="deleteConfirmId === device.deviceId">
                     <span class="text-[11px] text-gray-500 mr-1">Delete?</span>
@@ -190,6 +189,105 @@ function viewSms(device: Device) {
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Mobile Card View -->
+  <div class="md:hidden space-y-3">
+    <div
+      v-for="device in devices"
+      :key="'m-' + device.id"
+      class="bg-white rounded-xl shadow-sm border border-gray-200 p-4"
+    >
+      <div class="flex items-start justify-between mb-3">
+        <div class="min-w-0">
+          <h3 class="text-sm font-semibold text-gray-900 truncate">{{ device.ownerName || '—' }}</h3>
+          <p v-if="device.model" class="text-[11px] text-gray-500 mt-0.5">{{ device.model }}</p>
+        </div>
+        <span
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium shrink-0 ml-2"
+          :class="device.status === 'online'
+            ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+            : 'bg-red-50 text-red-600 ring-1 ring-red-200'"
+        >
+          <span class="w-1.5 h-1.5 rounded-full" :class="device.status === 'online' ? 'bg-emerald-500' : 'bg-red-400'"></span>
+          {{ device.status }}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+        <div>
+          <span class="text-gray-400 block">IBAN</span>
+          <span class="text-gray-700 font-mono text-[11px] break-all">{{ device.iban || '—' }}</span>
+        </div>
+        <div>
+          <span class="text-gray-400 block">Last Seen</span>
+          <span class="text-gray-700">{{ formatRelative(device.lastSeen) }}</span>
+        </div>
+        <div>
+          <span class="text-gray-400 block">Device ID</span>
+          <button
+            @click="copyDeviceId(device.deviceId)"
+            class="font-mono text-[11px] text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded hover:bg-gray-200 transition-colors"
+          >
+            {{ shortId(device.deviceId) }}
+            <span v-if="tooltipDeviceId === device.deviceId" class="text-primary-600 ml-1">Copied!</span>
+          </button>
+        </div>
+        <div v-if="device.androidVersion">
+          <span class="text-gray-400 block">Android</span>
+          <span class="text-gray-700">{{ device.androidVersion }}</span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <div v-if="deviceStore.apiKeys[device.deviceId]" class="flex items-center gap-1.5">
+          <code class="text-[11px] font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 truncate flex-1 min-w-0">
+            {{ deviceStore.apiKeys[device.deviceId] }}
+          </code>
+          <button
+            @click="copyKey(device.deviceId)"
+            class="text-[11px] px-2 py-1 rounded bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors shrink-0"
+          >
+            {{ copiedId === device.deviceId ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
+        <button
+          v-else
+          @click="regenerate(device.deviceId)"
+          :disabled="regenerating === device.deviceId"
+          class="text-[11px] px-2 py-1 rounded bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors disabled:opacity-50"
+        >
+          {{ regenerating === device.deviceId ? 'Generating...' : 'Regenerate Key' }}
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2 border-t border-gray-100">
+        <button
+          @click="viewSms(device)"
+          class="flex-1 text-center text-xs py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors font-medium"
+        >
+          View SMS
+        </button>
+        <template v-if="authStore.isAdmin">
+          <template v-if="deleteConfirmId === device.deviceId">
+            <button @click="deleteDevice(device.deviceId)" class="text-xs py-1.5 px-3 rounded-lg bg-red-600 text-white font-medium">Confirm</button>
+            <button @click="deleteConfirmId = ''" class="text-xs py-1.5 px-3 rounded-lg bg-gray-100 text-gray-600 font-medium">Cancel</button>
+          </template>
+          <button
+            v-else
+            @click="deleteConfirmId = device.deviceId"
+            class="text-xs py-1.5 px-3 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
+          >
+            Delete
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <div v-if="devices.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-200 px-6 py-12 text-center">
+      <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+      <p class="text-sm text-gray-400">No devices found</p>
     </div>
   </div>
 </template>

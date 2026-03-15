@@ -36,7 +36,8 @@ function copyDeviceId(deviceId: string) {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+  <!-- Desktop Table -->
+  <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full">
         <thead>
@@ -101,6 +102,55 @@ function copyDeviceId(deviceId: string) {
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Mobile Card View -->
+  <div class="md:hidden space-y-3">
+    <div
+      v-for="msg in messages"
+      :key="'m-' + msg.id"
+      class="bg-white rounded-xl shadow-sm border border-gray-200 p-4"
+    >
+      <div class="flex items-start justify-between mb-2">
+        <div class="min-w-0">
+          <span class="text-sm font-medium text-gray-900">{{ msg.sender }}</span>
+          <span class="text-[10px] text-gray-400 ml-2">{{ formatRelative(msg.createdAt) }}</span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0 ml-2">
+          <span
+            v-if="msg.otpCode"
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-700 ring-1 ring-amber-200 tabular-nums tracking-wider"
+          >
+            {{ msg.otpCode }}
+          </span>
+          <button
+            v-if="authStore.isAdmin"
+            @click="emit('delete', msg.id)"
+            class="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <p class="text-sm text-gray-800 break-words mb-2">{{ msg.message }}</p>
+
+      <div class="flex items-center gap-3 text-[11px] text-gray-400">
+        <span>{{ formatDate(msg.createdAt) }}</span>
+        <button
+          @click="copyDeviceId(msg.deviceId)"
+          class="font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded hover:bg-gray-200 transition-colors"
+        >
+          {{ shortId(msg.deviceId) }}
+          <span v-if="copiedDeviceId === msg.deviceId" class="text-primary-600 ml-1">Copied!</span>
+        </button>
+      </div>
+    </div>
+
+    <div v-if="messages.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-200 px-6 py-12 text-center">
+      <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+      <p class="text-sm text-gray-400">No SMS messages yet</p>
     </div>
   </div>
 </template>
