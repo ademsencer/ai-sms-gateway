@@ -131,10 +131,15 @@ export class DeviceController {
     await this.rabbitmq.publish(EXCHANGE_NAMES.DEVICE_EVENTS, routingKey, event as unknown as Record<string, unknown>);
 
     // Update device status in DB
-    const statusMap: Record<string, string> = { connected: 'online', disconnected: 'offline', error: 'error' };
+    const statusMap: Record<string, string> = { connected: 'online', disconnected: 'offline', error: 'error', heartbeat: 'online' };
     const status = statusMap[dto.eventType] || device.status;
     if (statusMap[dto.eventType]) {
       await this.prisma.device.update({ where: { deviceId: device.deviceId }, data: { status, lastSeen: new Date() } });
+    }
+
+    // Update heartbeat TTL in Redis for heartbeat events
+    if (dto.eventType === 'heartbeat' || dto.eventType === 'connected') {
+      await this.redis.setHeartbeat(device.deviceId, 120);
     }
 
     // Emit real-time status to dashboard via WebSocket

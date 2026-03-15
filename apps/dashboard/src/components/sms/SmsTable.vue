@@ -2,9 +2,12 @@
 import type { SmsMessage } from '@/stores/sms.store';
 import { useAuthStore } from '@/stores/auth.store';
 
+import { ref } from 'vue';
+
 defineProps<{ messages: SmsMessage[] }>();
 const emit = defineEmits<{ delete: [id: string] }>();
 const authStore = useAuthStore();
+const copiedDeviceId = ref('');
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();
@@ -19,6 +22,16 @@ function formatRelative(iso: string): string {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
+}
+
+function shortId(id: string): string {
+  return id.length > 8 ? id.slice(0, 4) + '...' + id.slice(-4) : id;
+}
+
+function copyDeviceId(deviceId: string) {
+  navigator.clipboard.writeText(deviceId);
+  copiedDeviceId.value = deviceId;
+  setTimeout(() => (copiedDeviceId.value = ''), 1500);
 }
 </script>
 
@@ -43,7 +56,19 @@ function formatRelative(iso: string): string {
               <div class="text-[10px] text-gray-400">{{ formatRelative(msg.createdAt) }}</div>
             </td>
             <td class="px-4 py-3">
-              <span class="text-xs font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{{ msg.deviceId }}</span>
+              <span
+                class="text-xs font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded cursor-pointer hover:bg-gray-200 transition-colors relative"
+                :title="msg.deviceId"
+                @click="copyDeviceId(msg.deviceId)"
+              >
+                {{ shortId(msg.deviceId) }}
+                <span
+                  v-if="copiedDeviceId === msg.deviceId"
+                  class="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded whitespace-nowrap z-10"
+                >
+                  Copied!
+                </span>
+              </span>
             </td>
             <td class="px-4 py-3 text-sm text-gray-700">{{ msg.sender }}</td>
             <td class="px-4 py-3">

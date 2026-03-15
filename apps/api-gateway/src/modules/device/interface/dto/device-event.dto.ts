@@ -6,8 +6,8 @@ export class DeviceEventDto {
   @IsString()
   deviceId: string;
 
-  @ApiProperty({ enum: ['connected', 'disconnected', 'error', 'heartbeat_lost'] })
-  @IsIn(['connected', 'disconnected', 'error', 'heartbeat_lost'])
+  @ApiProperty({ enum: ['connected', 'disconnected', 'error', 'heartbeat', 'heartbeat_lost'] })
+  @IsIn(['connected', 'disconnected', 'error', 'heartbeat', 'heartbeat_lost'])
   eventType: string;
 
   @ApiProperty({ required: false, example: 'Connection lost' })
