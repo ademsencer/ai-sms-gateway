@@ -57,6 +57,10 @@ class MainActivity : AppCompatActivity() {
         btnStart.setOnClickListener { startGatewayService() }
         btnStop.setOnClickListener { stopGatewayService() }
 
+        // Show app version
+        val tvVersion = findViewById<TextView>(R.id.tvVersion)
+        tvVersion.text = "v${BuildConfig.VERSION_NAME}"
+
         checkAndRequestPermissions()
         updateUI()
 

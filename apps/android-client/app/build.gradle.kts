@@ -3,6 +3,19 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Read version from root VERSION file
+val appVersionName: String = try {
+    rootProject.file("../VERSION").readText().trim()
+} catch (_: Exception) {
+    project.findProperty("VERSION_NAME") as? String ?: "1.0.0"
+}
+val appVersionCode: Int = try {
+    val parts = appVersionName.split(".")
+    parts[0].toInt() * 10000 + parts[1].toInt() * 100 + parts[2].toInt()
+} catch (_: Exception) {
+    1
+}
+
 android {
     namespace = "com.smsgateway"
     compileSdk = 35
@@ -11,8 +24,8 @@ android {
         applicationId = "com.smsgateway"
         minSdk = 26
         targetSdk = 35
-        versionCode = (project.findProperty("VERSION_CODE") as? String)?.toIntOrNull() ?: 1
-        versionName = project.findProperty("VERSION_NAME") as? String ?: "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         val apiUrl = project.findProperty("API_URL") as? String ?: "http://213.32.89.237:3005"
         buildConfigField("String", "API_URL", "\"$apiUrl\"")

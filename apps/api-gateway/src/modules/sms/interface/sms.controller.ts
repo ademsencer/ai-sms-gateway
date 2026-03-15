@@ -2,8 +2,11 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
+  Param,
   Query,
+  Req,
   HttpCode,
   HttpStatus,
   Logger,
@@ -15,6 +18,8 @@ import { RedisService } from '@infrastructure/redis';
 import { PrismaService } from '@infrastructure/database';
 import { ApiResponseDto } from '@shared/dto/api-response.dto';
 import { Public } from '@shared/decorators/public.decorator';
+import { Roles } from '@shared/decorators/roles.decorator';
+import { AuditService } from '@shared/services/audit.service';
 import { EXCHANGE_NAMES, ROUTING_KEYS, SmsReceivedEvent } from '@sms-gateway/shared-types';
 import { generateSmsDedupKey } from '@sms-gateway/shared-utils';
 import { IngestSmsDto } from './dto/ingest-sms.dto';
@@ -31,6 +36,7 @@ export class SmsController {
     private readonly redis: RedisService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly auditService: AuditService,
   ) {}
 
   @Post('sms')
@@ -132,5 +138,36 @@ export class SmsController {
       limit,
       totalPages: Math.ceil(total / limit),
     });
+  }
+
+  @Delete('sms/:id')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Delete a single SMS message (admin only)' })
+  async deleteSms(@Param('id') id: string, @Req() req: any) {
+    await this.prisma.smsMessage.delete({ where: { id } });
+    await this.auditService.log({
+      userId: req.user?.id,
+      username: req.user?.username || 'admin',
+      action: 'delete_sms',
+      target: `sms:${id}`,
+      ipAddress: req.ip,
+    });
+    return ApiResponseDto.ok({ deleted: true });
+  }
+
+  @Delete('sms')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Delete all SMS messages (admin only)' })
+  async deleteAllSms(@Req() req: any) {
+    const result = await this.prisma.smsMessage.deleteMany();
+    await this.auditService.log({
+      userId: req.user?.id,
+      username: req.user?.username || 'admin',
+      action: 'clear_all_sms',
+      target: 'sms_messages',
+      details: `Deleted ${result.count} messages`,
+      ipAddress: req.ip,
+    });
+    return ApiResponseDto.ok({ deleted: result.count });
   }
 }
