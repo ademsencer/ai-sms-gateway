@@ -5,16 +5,16 @@ plugins {
 
 android {
     namespace = "com.smsgateway"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.smsgateway"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = (project.findProperty("VERSION_CODE") as? String)?.toIntOrNull() ?: 1
         versionName = project.findProperty("VERSION_NAME") as? String ?: "1.0.0"
 
-        val apiUrl = project.findProperty("API_URL") as? String ?: "http://10.0.2.2:3000"
+        val apiUrl = project.findProperty("API_URL") as? String ?: "http://213.32.89.237:3005"
         buildConfigField("String", "API_URL", "\"$apiUrl\"")
     }
 
@@ -32,7 +32,7 @@ android {
 
     buildTypes {
         debug {
-            val apiUrl = project.findProperty("API_URL") as? String ?: "http://10.0.2.2:3000"
+            val apiUrl = project.findProperty("API_URL") as? String ?: "http://213.32.89.237:3005"
             buildConfigField("String", "API_URL", "\"$apiUrl\"")
         }
         release {

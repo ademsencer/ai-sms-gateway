@@ -55,6 +55,11 @@ class MainActivity : AppCompatActivity() {
         btnStop.setOnClickListener { stopService() }
 
         requestPermissions()
+
+        // Auto-start service if previously enabled and configured
+        if (prefs.serviceEnabled && prefs.isConfigured) {
+            startService()
+        }
     }
 
     private fun saveConfig() {

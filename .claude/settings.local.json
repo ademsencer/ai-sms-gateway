@@ -104,7 +104,25 @@
       "Bash(openssl rand:*)",
       "Bash(gh secret:*)",
       "Bash(git push:*)",
-      "Bash(gh run:*)"
+      "Bash(gh run:*)",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(sed -i '' 's|COPY package.json pnpm-workspace.yaml pnpm-lock.yaml\\\\* .npmrc\\\\* ./|COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* tsconfig.base.json ./|' \"/Users/ademsencer/Projects/ai/sms-gateway/$f\")",
+      "Bash(done)",
+      "Bash(gh auth:*)",
+      "Bash(sshpass -p 'IW1SadItw78tXXS48ZD' ssh -o StrictHostKeyChecking=no root@213.32.89.237 'cd /opt/sms-gateway && docker compose ps')",
+      "Bash(brew list:*)",
+      "Bash(expect -c ':*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb devices:*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb install:*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell:*)",
+      "Bash(curl -s -X POST http://213.32.89.237:3005/api/devices/register -H \"Content-Type: application/json\" -d '{\"\"deviceId\"\": \"\"emulator_001\"\", \"\"name\"\": \"\"Android Emulator\"\"}')",
+      "Bash(curl -s -X POST http://213.32.89.237:3005/api/device/register -H \"Content-Type: application/json\" -d '{\"\"deviceId\"\": \"\"emulator_001\"\", \"\"name\"\": \"\"Android Emulator\"\"}')",
+      "Bash(curl -s -X POST http://213.32.89.237:3005/api/device/register -H \"Content-Type: application/json\" -d '{\"\"deviceId\"\": \"\"device_001\"\", \"\"name\"\": \"\"Android Emulator\"\"}')",
+      "Bash(./gradlew installDebug)",
+      "Bash(./gradlew clean:*)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb push:*)",
+      "Bash(curl -s http://213.32.89.237:3005/api/device)"
     ]
   }
 }
