@@ -2,7 +2,7 @@
 import type { SmsMessage } from '@/stores/sms.store';
 import { useAuthStore } from '@/stores/auth.store';
 
-const props = defineProps<{ messages: SmsMessage[] }>();
+defineProps<{ messages: SmsMessage[] }>();
 const emit = defineEmits<{ delete: [id: string] }>();
 const authStore = useAuthStore();
 
