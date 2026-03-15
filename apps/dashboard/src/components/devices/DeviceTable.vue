@@ -85,6 +85,7 @@ function viewSms(device: Device) {
           <tr class="border-b border-gray-100 bg-gray-50/50">
             <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Name</th>
             <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">IBAN</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Model</th>
             <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Device ID</th>
             <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
             <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">API Key</th>
@@ -96,6 +97,11 @@ function viewSms(device: Device) {
           <tr v-for="device in devices" :key="device.id" class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
             <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ device.ownerName || '—' }}</td>
             <td class="px-4 py-3 text-xs font-mono text-gray-600">{{ device.iban || '—' }}</td>
+            <td class="px-4 py-3">
+              <div v-if="device.model" class="text-xs text-gray-700">{{ device.model }}</div>
+              <div v-if="device.androidVersion" class="text-[10px] text-gray-400">Android {{ device.androidVersion }}</div>
+              <span v-if="!device.model && !device.androidVersion" class="text-xs text-gray-300">—</span>
+            </td>
             <td class="px-4 py-3 relative">
               <button
                 @click="copyDeviceId(device.deviceId)"
@@ -177,7 +183,7 @@ function viewSms(device: Device) {
             </td>
           </tr>
           <tr v-if="devices.length === 0">
-            <td colspan="7" class="px-6 py-12 text-center">
+            <td colspan="8" class="px-6 py-12 text-center">
               <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
               <p class="text-sm text-gray-400">No devices found</p>
             </td>

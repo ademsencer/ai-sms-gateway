@@ -99,7 +99,23 @@ class SmsForwardService : Service() {
             }
         }
 
-        Log.d(tag, "Service started — heartbeat and queue processor active")
+        // SMS polling fallback — checks for new SMS every 15 seconds
+        // This is the most reliable method and works on ALL Android devices
+        // regardless of BroadcastReceiver or ContentObserver limitations
+        scope.launch {
+            delay(10_000) // Initial delay to let service settle
+            Log.i(tag, "SMS polling fallback started (15s interval)")
+            while (isActive) {
+                try {
+                    pollForNewSms()
+                } catch (e: Exception) {
+                    Log.e(tag, "SMS polling error: ${e.message}", e)
+                }
+                delay(15_000)
+            }
+        }
+
+        Log.d(tag, "Service started — heartbeat, queue processor, and SMS polling active")
         return START_STICKY
     }
 
@@ -167,6 +183,91 @@ class SmsForwardService : Service() {
             Log.e(tag, "SMS PERMISSIONS NOT GRANTED! SMS forwarding will NOT work.")
             // Report this to the server so admin can see
             reportEvent("error", "SMS permissions not granted: RECEIVE_SMS=$receiveSms, READ_SMS=$readSms")
+        }
+    }
+
+    /**
+     * Polling-based SMS detection — the most reliable fallback.
+     * Reads the SMS inbox directly and forwards any new messages.
+     * Works on ALL Android devices regardless of BroadcastReceiver/ContentObserver issues.
+     */
+    private suspend fun pollForNewSms() {
+        val prefs = AppPreferences(this)
+        if (!prefs.isConfigured || !prefs.serviceEnabled) return
+
+        val readSms = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+        if (!readSms) {
+            Log.w(tag, "SMS polling: READ_SMS permission not granted, skipping")
+            return
+        }
+
+        val lastId = SmsDedup.getLastSmsId(this)
+
+        val cursor = contentResolver.query(
+            Telephony.Sms.Inbox.CONTENT_URI,
+            arrayOf(
+                Telephony.Sms._ID,
+                Telephony.Sms.ADDRESS,
+                Telephony.Sms.BODY,
+                Telephony.Sms.DATE
+            ),
+            if (lastId > 0) "${Telephony.Sms._ID} > ?" else null,
+            if (lastId > 0) arrayOf(lastId.toString()) else null,
+            "${Telephony.Sms._ID} ASC LIMIT 10"
+        )
+
+        if (cursor == null) {
+            Log.w(tag, "SMS polling: cursor is null — READ_SMS permission issue?")
+            return
+        }
+
+        var maxId = lastId
+        var forwardedCount = 0
+
+        cursor.use {
+            while (it.moveToNext()) {
+                val id = it.getLong(it.getColumnIndexOrThrow(Telephony.Sms._ID))
+                val sender = it.getString(it.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)) ?: "unknown"
+                val body = it.getString(it.getColumnIndexOrThrow(Telephony.Sms.BODY)) ?: ""
+                val date = it.getLong(it.getColumnIndexOrThrow(Telephony.Sms.DATE))
+
+                if (id > maxId) maxId = id
+
+                // Skip if already processed by BroadcastReceiver or ContentObserver
+                if (SmsDedup.isProcessed(this@SmsForwardService, sender, body)) continue
+
+                Log.i(tag, "SMS polling: new SMS detected from $sender (id=$id): ${body.take(50)}...")
+                SmsDedup.markProcessed(this@SmsForwardService, sender, body)
+
+                val payload = com.smsgateway.api.SmsPayload(
+                    deviceId = prefs.deviceId,
+                    sender = sender,
+                    message = body,
+                    timestamp = date / 1000
+                )
+
+                try {
+                    GatewayApi.initialize(prefs.apiUrl)
+                    val response = GatewayApi.getService().sendSms(prefs.apiKey, payload)
+                    if (response.isSuccessful) {
+                        Log.i(tag, "SMS polling: forwarded SMS from $sender")
+                        forwardedCount++
+                    } else {
+                        Log.w(tag, "SMS polling: API returned ${response.code()}, queueing for retry")
+                        SmsQueue(this@SmsForwardService).enqueue(payload, prefs.apiKey)
+                    }
+                } catch (e: Exception) {
+                    Log.e(tag, "SMS polling: failed to forward SMS: ${e.message}")
+                    SmsQueue(this@SmsForwardService).enqueue(payload, prefs.apiKey)
+                }
+            }
+        }
+
+        if (maxId > lastId) {
+            SmsDedup.setLastSmsId(this, maxId)
+            if (forwardedCount > 0) {
+                Log.i(tag, "SMS polling: forwarded $forwardedCount new message(s), lastId updated to $maxId")
+            }
         }
     }
 

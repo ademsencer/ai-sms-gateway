@@ -21,8 +21,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.provider.Telephony
 import com.smsgateway.api.GatewayApi
 import com.smsgateway.api.RegisterDevicePayload
+import com.smsgateway.api.SmsPayload
 import com.smsgateway.data.AppPreferences
 import kotlinx.coroutines.*
 
@@ -42,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutControls: LinearLayout
     private lateinit var tvPermissionStatus: TextView
     private lateinit var tvDiagnostics: TextView
+    private lateinit var btnTestSms: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,10 +63,12 @@ class MainActivity : AppCompatActivity() {
 
         tvPermissionStatus = findViewById(R.id.tvPermissionStatus)
         tvDiagnostics = findViewById(R.id.tvDiagnostics)
+        btnTestSms = findViewById(R.id.btnTestSms)
 
         btnRegister.setOnClickListener { registerDevice() }
         btnStart.setOnClickListener { startGatewayService() }
         btnStop.setOnClickListener { stopGatewayService() }
+        btnTestSms.setOnClickListener { testSmsForwarding() }
 
         // Show app version
         val tvVersion = findViewById<TextView>(R.id.tvVersion)
@@ -254,6 +259,90 @@ class MainActivity : AppCompatActivity() {
         tvDiagnostics.text = diag.toString().trim()
 
         Log.d(tag, "Diagnostics updated: RECEIVE_SMS=$receiveSms, READ_SMS=$readSms, batteryIgnored=$batteryIgnored")
+    }
+
+    // ─── Test SMS Forwarding ──────────────────────────────────────────
+
+    /**
+     * Reads the last SMS from inbox and sends it to the API.
+     * This verifies the entire pipeline: SMS read → API call → RabbitMQ → Telegram.
+     */
+    private fun testSmsForwarding() {
+        if (!prefs.isConfigured) {
+            Toast.makeText(this, "Önce cihazı kaydedin", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!hasSmsPermissions()) {
+            Toast.makeText(this, "SMS izinleri verilmemiş!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        btnTestSms.isEnabled = false
+        btnTestSms.text = "Testing..."
+
+        scope.launch {
+            try {
+                val cursor = contentResolver.query(
+                    Telephony.Sms.Inbox.CONTENT_URI,
+                    arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
+                    null, null,
+                    "${Telephony.Sms.DATE} DESC LIMIT 1"
+                )
+
+                if (cursor == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "SMS okunamadı — izin sorunu olabilir", Toast.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+
+                cursor.use {
+                    if (!it.moveToFirst()) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Gelen kutusunda SMS bulunamadı", Toast.LENGTH_LONG).show()
+                        }
+                        return@launch
+                    }
+
+                    val sender = it.getString(0) ?: "unknown"
+                    val body = it.getString(1) ?: ""
+                    val date = it.getLong(2)
+
+                    Log.i(tag, "Test SMS: from=$sender, body=${body.take(50)}")
+
+                    val payload = SmsPayload(
+                        deviceId = prefs.deviceId,
+                        sender = sender,
+                        message = "[TEST] $body",
+                        timestamp = date / 1000
+                    )
+
+                    val response = withContext(Dispatchers.IO) {
+                        GatewayApi.initialize(prefs.apiUrl)
+                        GatewayApi.getService().sendSms(prefs.apiKey, payload)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        if (response.isSuccessful) {
+                            Toast.makeText(this@MainActivity, "✓ Test SMS başarıyla iletildi! Telegram'ı kontrol edin.", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(this@MainActivity, "✗ API hatası: ${response.code()} — ${response.message()}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "Test SMS failed: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "✗ Bağlantı hatası: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    btnTestSms.isEnabled = true
+                    btnTestSms.text = "Test SMS"
+                }
+            }
+        }
     }
 
     // ─── Xiaomi/MIUI Autostart Support ─────────────────────────────────

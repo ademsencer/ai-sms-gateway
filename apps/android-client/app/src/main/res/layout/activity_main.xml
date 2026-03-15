@@ -185,6 +185,17 @@
                 android:enabled="false" />
         </LinearLayout>
 
+        <!-- Test SMS Button -->
+        <Button
+            android:id="@+id/btnTestSms"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp"
+            android:text="Test SMS"
+            android:backgroundTint="#7C3AED"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+
         <!-- Permission & Diagnostics Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
