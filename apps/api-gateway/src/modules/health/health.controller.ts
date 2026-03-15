@@ -3,7 +3,6 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Public } from '@shared/decorators/public.decorator';
 import { PrismaService } from '@infrastructure/database';
 import { RedisService } from '@infrastructure/redis';
-import { Request } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -28,7 +27,7 @@ export class HealthController {
   @Get()
   @Public()
   @ApiOperation({ summary: 'Health check', description: 'Returns service health status.' })
-  async check(@Req() req: Request): Promise<{
+  async check(@Req() req: any): Promise<{
     status: string;
     version: string;
     apkUrl: string;
