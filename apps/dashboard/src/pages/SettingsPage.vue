@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores/auth.store';
+import { useApi } from '@/composables/useApi';
 
 const authStore = useAuthStore();
+const { post } = useApi();
 
 const qrCodeDataUrl = ref('');
 const setupSecret = ref('');
@@ -11,6 +13,53 @@ const showSetup = ref(false);
 const error = ref('');
 const successMsg = ref('');
 const loading = ref(false);
+
+// Password change
+const currentPassword = ref('');
+const newPassword = ref('');
+const confirmPassword = ref('');
+const changingPassword = ref(false);
+
+async function handleChangePassword() {
+  error.value = '';
+  if (newPassword.value !== confirmPassword.value) {
+    error.value = 'New passwords do not match';
+    return;
+  }
+  changingPassword.value = true;
+  try {
+    await post('/auth/change-password', {
+      currentPassword: currentPassword.value,
+      newPassword: newPassword.value,
+    });
+    currentPassword.value = '';
+    newPassword.value = '';
+    confirmPassword.value = '';
+    successMsg.value = 'Password changed successfully';
+    setTimeout(() => (successMsg.value = ''), 3000);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to change password';
+  } finally {
+    changingPassword.value = false;
+  }
+}
+
+async function handleDisable2fa() {
+  error.value = '';
+  loading.value = true;
+  try {
+    await post('/auth/2fa/disable', {});
+    if (authStore.user) {
+      authStore.user.totpEnabled = false;
+    }
+    successMsg.value = 'Two-factor authentication disabled successfully';
+    setTimeout(() => (successMsg.value = ''), 3000);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to disable 2FA';
+  } finally {
+    loading.value = false;
+  }
+}
 
 async function handleSetup2fa() {
   error.value = '';
@@ -129,9 +178,64 @@ async function handleEnable2fa() {
         </form>
       </div>
 
-      <div v-if="authStore.user?.totpEnabled && !showSetup">
+      <div v-if="authStore.user?.totpEnabled && !showSetup" class="space-y-3">
         <p class="text-sm text-gray-600">Two-factor authentication is currently active on your account.</p>
+        <button
+          @click="handleDisable2fa"
+          :disabled="loading"
+          class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+        >
+          {{ loading ? 'Disabling...' : 'Disable 2FA' }}
+        </button>
       </div>
+    </div>
+
+    <!-- Change Password Section -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-1">Change Password</h2>
+      <p class="text-sm text-gray-500 mb-4">Update your account password.</p>
+
+      <form @submit.prevent="handleChangePassword" class="space-y-4 max-w-md">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+          <input
+            v-model="currentPassword"
+            type="password"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-600 focus:border-primary-600 outline-none"
+            placeholder="Enter current password"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+          <input
+            v-model="newPassword"
+            type="password"
+            required
+            minlength="6"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-600 focus:border-primary-600 outline-none"
+            placeholder="Min 6 characters"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+          <input
+            v-model="confirmPassword"
+            type="password"
+            required
+            minlength="6"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-600 focus:border-primary-600 outline-none"
+            placeholder="Repeat new password"
+          />
+        </div>
+        <button
+          type="submit"
+          :disabled="changingPassword"
+          class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+        >
+          {{ changingPassword ? 'Changing...' : 'Change Password' }}
+        </button>
+      </form>
     </div>
   </div>
 </template>

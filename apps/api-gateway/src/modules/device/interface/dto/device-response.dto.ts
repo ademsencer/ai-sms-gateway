@@ -17,6 +17,12 @@ export class DeviceResponseDto {
   serialNumber?: string;
 
   @ApiProperty()
+  ownerName: string;
+
+  @ApiProperty()
+  iban: string;
+
+  @ApiProperty()
   status: string;
 
   @ApiProperty()

@@ -30,4 +30,20 @@ export class RegisterDeviceDto {
   @IsOptional()
   @MaxLength(128)
   serialNumber?: string;
+
+  /** Owner name */
+  @ApiProperty({ example: 'John Doe', description: 'Device owner name' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(2)
+  @MaxLength(128)
+  ownerName: string;
+
+  /** IBAN */
+  @ApiProperty({ example: 'TR330006100519786457841326', description: 'IBAN number' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(15)
+  @MaxLength(34)
+  iban: string;
 }

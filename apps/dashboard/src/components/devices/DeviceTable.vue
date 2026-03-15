@@ -50,9 +50,9 @@ async function deleteDevice(deviceId: string) {
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-50">
         <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IBAN</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device ID</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Android</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">API Key</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
@@ -61,9 +61,9 @@ async function deleteDevice(deviceId: string) {
       </thead>
       <tbody class="divide-y divide-gray-200">
         <tr v-for="device in devices" :key="device.id" class="hover:bg-gray-50">
+          <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ device.ownerName || '—' }}</td>
+          <td class="px-6 py-4 text-sm font-mono text-gray-700">{{ device.iban || '—' }}</td>
           <td class="px-6 py-4 text-sm font-mono text-gray-900">{{ device.deviceId }}</td>
-          <td class="px-6 py-4 text-sm text-gray-700">{{ device.model || '—' }}</td>
-          <td class="px-6 py-4 text-sm text-gray-500">{{ device.androidVersion || '—' }}</td>
           <td class="px-6 py-4">
             <span
               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"

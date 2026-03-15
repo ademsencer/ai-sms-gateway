@@ -2,6 +2,8 @@ export class DeviceEntity {
   constructor(
     public readonly id: string,
     public readonly deviceId: string,
+    public readonly ownerName: string,
+    public readonly iban: string,
     public readonly status: string,
     public readonly model: string | null,
     public readonly androidVersion: string | null,

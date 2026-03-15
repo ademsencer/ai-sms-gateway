@@ -31,11 +31,11 @@ export class SmsSocketGateway
     // Create a duplicate connection for subscribing (ioredis requires separate connection for sub)
     this.subscriber = this.redis.duplicate();
 
-    this.subscriber.subscribe('sms:realtime', 'device:status', (err) => {
+    this.subscriber.subscribe('sms:realtime', 'device:status', 'device:registered', (err) => {
       if (err) {
         this.logger.error(`Redis subscribe error: ${err.message}`);
       } else {
-        this.logger.log('Subscribed to Redis pub/sub channels: sms:realtime, device:status');
+        this.logger.log('Subscribed to Redis pub/sub channels: sms:realtime, device:status, device:registered');
       }
     });
 
@@ -46,6 +46,8 @@ export class SmsSocketGateway
           this.server.emit(WS_EVENTS.SMS_RECEIVED, data);
         } else if (channel === 'device:status') {
           this.server.emit(WS_EVENTS.DEVICE_STATUS, data);
+        } else if (channel === 'device:registered') {
+          this.server.emit(WS_EVENTS.DEVICE_REGISTERED, data);
         }
       } catch (error) {
         this.logger.error(`Failed to parse Redis pub/sub message: ${error}`);

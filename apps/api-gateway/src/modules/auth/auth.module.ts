@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './services/auth.service';
 import { TotpService } from './services/totp.service';
+import { AuditService } from '@shared/services/audit.service';
 import { AuthController } from './interface/auth.controller';
 import { UserController } from './interface/user.controller';
 
@@ -19,7 +20,7 @@ import { UserController } from './interface/user.controller';
       }),
     }),
   ],
-  providers: [AuthService, TotpService],
+  providers: [AuthService, TotpService, AuditService],
   controllers: [AuthController, UserController],
   exports: [JwtModule, AuthService],
 })

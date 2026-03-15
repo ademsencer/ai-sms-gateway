@@ -5,8 +5,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { EXCHANGE_NAMES, DeviceLifecycleEvent, DeviceEventType } from '@sms-gateway/shared-types';
 import { PrismaService } from '@infrastructure/database';
 import { RabbitmqService } from '@infrastructure/rabbitmq/rabbitmq.service';
+import { RedisService } from '@infrastructure/redis';
 import { SmsSocketGateway } from '@infrastructure/socket/socket.gateway';
 import { ApiResponseDto } from '@shared/dto/api-response.dto';
+import { AuditService } from '@shared/services/audit.service';
 import { Public } from '@shared/decorators/public.decorator';
 import { Roles } from '@shared/decorators/roles.decorator';
 import { RegisterDeviceDto } from './dto/register-device.dto';
@@ -22,7 +24,9 @@ export class DeviceController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rabbitmq: RabbitmqService,
+    private readonly redis: RedisService,
     private readonly socketGateway: SmsSocketGateway,
+    private readonly auditService: AuditService,
   ) {}
 
   @Post('register')
@@ -43,10 +47,12 @@ export class DeviceController {
     const apiKey = uuidv4();
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
 
-    await this.prisma.device.create({
+    const created = await this.prisma.device.create({
       data: {
         deviceId: dto.deviceId,
         apiKeyHash,
+        ownerName: dto.ownerName,
+        iban: dto.iban,
         androidVersion: dto.androidVersion,
         model: dto.model,
         serialNumber: dto.serialNumber,
@@ -54,6 +60,24 @@ export class DeviceController {
     });
 
     this.logger.log(`Device registered: ${dto.deviceId} — model: ${dto.model}, android: ${dto.androidVersion}`);
+
+    // Publish Redis event for real-time dashboard update
+    await this.redis.publish('device:registered', {
+      deviceId: created.deviceId,
+      ownerName: created.ownerName,
+      iban: created.iban,
+      model: created.model,
+      status: created.status,
+      createdAt: created.createdAt.toISOString(),
+    });
+
+    // Audit log
+    await this.auditService.log({
+      username: 'system',
+      action: 'register_device',
+      target: dto.deviceId,
+      details: JSON.stringify({ ownerName: dto.ownerName, model: dto.model }),
+    });
 
     return ApiResponseDto.ok<RegisterDeviceResponseDto>(
       { deviceId: dto.deviceId, apiKey },
@@ -97,6 +121,8 @@ export class DeviceController {
     const event: DeviceLifecycleEvent = {
       deviceId: device.deviceId,
       deviceName: device.model || device.deviceId,
+      ownerName: device.ownerName,
+      iban: device.iban,
       eventType: dto.eventType as DeviceEventType,
       message: dto.message,
       occurredAt: new Date().toISOString(),
@@ -131,6 +157,8 @@ export class DeviceController {
     const result: DeviceResponseDto[] = devices.map((d) => ({
       id: d.id,
       deviceId: d.deviceId,
+      ownerName: d.ownerName,
+      iban: d.iban,
       androidVersion: d.androidVersion ?? undefined,
       model: d.model ?? undefined,
       serialNumber: d.serialNumber ?? undefined,
@@ -165,6 +193,14 @@ export class DeviceController {
     if (!device) return ApiResponseDto.fail('Device not found');
     await this.prisma.device.delete({ where: { deviceId } });
     this.logger.log(`Device deleted: ${deviceId}`);
+
+    // Audit log
+    await this.auditService.log({
+      username: 'admin',
+      action: 'delete_device',
+      target: deviceId,
+    });
+
     return ApiResponseDto.ok(null, 'Device deleted');
   }
 }

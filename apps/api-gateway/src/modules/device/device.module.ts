@@ -3,6 +3,7 @@ import { DeviceController } from './interface/device.controller';
 import { DeviceRepository } from './infrastructure/device.repository';
 import { DEVICE_REPOSITORY } from './domain/device-repository.interface';
 import { SocketModule } from '@infrastructure/socket';
+import { AuditService } from '@shared/services/audit.service';
 
 @Module({
   imports: [SocketModule],
@@ -12,6 +13,7 @@ import { SocketModule } from '@infrastructure/socket';
       provide: DEVICE_REPOSITORY,
       useClass: DeviceRepository,
     },
+    AuditService,
   ],
   exports: [DEVICE_REPOSITORY],
 })

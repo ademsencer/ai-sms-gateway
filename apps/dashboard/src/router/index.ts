@@ -6,6 +6,7 @@ import SmsLogsPage from '@/pages/SmsLogsPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import UsersPage from '@/pages/UsersPage.vue';
 import SettingsPage from '@/pages/SettingsPage.vue';
+import AuditLogPage from '@/pages/AuditLogPage.vue';
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -15,6 +16,7 @@ export const router = createRouter({
     { path: '/sms', name: 'sms', component: SmsLogsPage },
     { path: '/login', name: 'login', component: LoginPage },
     { path: '/users', name: 'users', component: UsersPage, meta: { requiresAdmin: true } },
+    { path: '/audit', name: 'audit', component: AuditLogPage, meta: { requiresAdmin: true } },
     { path: '/settings', name: 'settings', component: SettingsPage },
   ],
 });

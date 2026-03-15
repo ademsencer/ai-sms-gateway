@@ -11,6 +11,8 @@ model Device {
   id             String   @id @default(uuid())
   deviceId       String   @unique @map("device_id")
   apiKeyHash     String   @map("api_key_hash")
+  ownerName      String   @map("owner_name")
+  iban           String
   androidVersion String?  @map("android_version")
   model          String?
   serialNumber   String?  @map("serial_number")
@@ -56,4 +58,20 @@ model User {
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   @@map("users")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  username  String
+  action    String
+  target    String
+  details   String?  @db.Text
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -7,9 +7,9 @@ import { DeviceEntity } from '../domain/device.entity';
 export class DeviceRepository implements IDeviceRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(deviceId: string, apiKeyHash: string): Promise<DeviceEntity> {
+  async create(deviceId: string, apiKeyHash: string, ownerName: string, iban: string): Promise<DeviceEntity> {
     const device = await this.prisma.device.create({
-      data: { deviceId, apiKeyHash },
+      data: { deviceId, apiKeyHash, ownerName, iban },
     });
     return this.toEntity(device);
   }
@@ -43,6 +43,8 @@ export class DeviceRepository implements IDeviceRepository {
   private toEntity(raw: {
     id: string;
     deviceId: string;
+    ownerName: string;
+    iban: string;
     status: string;
     model: string | null;
     androidVersion: string | null;
@@ -54,6 +56,8 @@ export class DeviceRepository implements IDeviceRepository {
     return new DeviceEntity(
       raw.id,
       raw.deviceId,
+      raw.ownerName,
+      raw.iban,
       raw.status,
       raw.model,
       raw.androidVersion,

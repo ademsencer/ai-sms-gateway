@@ -30,6 +30,14 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean("service_enabled", false)
         set(value) = prefs.edit().putBoolean("service_enabled", value).apply()
 
+    var ownerName: String
+        get() = prefs.getString("owner_name", "") ?: ""
+        set(value) = prefs.edit().putString("owner_name", value).apply()
+
+    var iban: String
+        get() = prefs.getString("iban", "") ?: ""
+        set(value) = prefs.edit().putString("iban", value).apply()
+
     val isConfigured: Boolean
         get() = apiUrl.isNotBlank() && deviceId.isNotBlank() && apiKey.isNotBlank()
 }

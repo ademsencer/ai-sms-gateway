@@ -54,7 +54,9 @@ export class MonitorService {
         // Publish heartbeat_lost event to RabbitMQ (for Telegram notification)
         await this.rabbitmq.publish(EXCHANGE_NAMES.DEVICE_EVENTS, 'device.heartbeat_lost', {
           deviceId: device.deviceId,
-          deviceName: device.name,
+          deviceName: device.model || device.deviceId,
+          ownerName: device.ownerName,
+          iban: device.iban,
           eventType: 'heartbeat_lost',
           message: `Heartbeat expired after ${this.configService.get<number>('device.heartbeatTtl', 120)}s`,
           occurredAt: new Date().toISOString(),

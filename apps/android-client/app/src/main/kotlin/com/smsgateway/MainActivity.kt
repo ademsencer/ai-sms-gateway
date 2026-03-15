@@ -1,16 +1,13 @@
 package com.smsgateway
 
 import android.Manifest
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
-import android.widget.ImageButton
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -28,10 +25,9 @@ class MainActivity : AppCompatActivity() {
     private val permissionRequestCode = 1001
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    private lateinit var tvDeviceId: TextView
-    private lateinit var tvModel: TextView
-    private lateinit var tvAndroidVersion: TextView
     private lateinit var tvStatus: TextView
+    private lateinit var etOwnerName: EditText
+    private lateinit var etIban: EditText
     private lateinit var btnRegister: Button
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
@@ -44,27 +40,14 @@ class MainActivity : AppCompatActivity() {
 
         prefs = AppPreferences(this)
 
-        tvDeviceId = findViewById(R.id.tvDeviceId)
-        tvModel = findViewById(R.id.tvModel)
-        tvAndroidVersion = findViewById(R.id.tvAndroidVersion)
         tvStatus = findViewById(R.id.tvStatus)
+        etOwnerName = findViewById(R.id.etOwnerName)
+        etIban = findViewById(R.id.etIban)
         btnRegister = findViewById(R.id.btnRegister)
         btnStart = findViewById(R.id.btnStart)
         btnStop = findViewById(R.id.btnStop)
         cardRegister = findViewById(R.id.cardRegister)
         layoutControls = findViewById(R.id.layoutControls)
-
-        // Display device info
-        tvDeviceId.text = prefs.deviceId
-        tvModel.text = "${Build.MANUFACTURER} ${Build.MODEL}"
-        tvAndroidVersion.text = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
-
-        // Copy device ID
-        findViewById<ImageButton>(R.id.btnCopyDeviceId).setOnClickListener {
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Device ID", prefs.deviceId))
-            Toast.makeText(this, "Device ID copied", Toast.LENGTH_SHORT).show()
-        }
 
         btnRegister.setOnClickListener { registerDevice() }
         btnStart.setOnClickListener { startGatewayService() }
@@ -85,6 +68,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun registerDevice() {
+        val ownerName = etOwnerName.text.toString().trim()
+        val iban = etIban.text.toString().trim().uppercase()
+
+        if (ownerName.length < 2) {
+            Toast.makeText(this, "Ad Soyad en az 2 karakter olmali", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (iban.length < 15) {
+            Toast.makeText(this, "Gecerli bir IBAN giriniz", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         btnRegister.isEnabled = false
         btnRegister.text = "Registering..."
 
@@ -94,6 +89,8 @@ class MainActivity : AppCompatActivity() {
             try {
                 val payload = RegisterDevicePayload(
                     deviceId = prefs.deviceId,
+                    ownerName = ownerName,
+                    iban = iban,
                     androidVersion = Build.VERSION.RELEASE,
                     model = "${Build.MANUFACTURER} ${Build.MODEL}",
                     serialNumber = Build.SERIAL.takeIf { it != Build.UNKNOWN } ?: Build.FINGERPRINT.takeLast(32)
@@ -106,6 +103,8 @@ class MainActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body()?.success == true) {
                     val apiKey = response.body()?.data?.apiKey ?: ""
                     prefs.apiKey = apiKey
+                    prefs.ownerName = ownerName
+                    prefs.iban = iban
                     Toast.makeText(this@MainActivity, "Device registered!", Toast.LENGTH_SHORT).show()
                     updateUI()
                 } else {

@@ -55,16 +55,18 @@ export class SmsController {
       return ApiResponseDto.fail<{ queued: boolean }>('Duplicate SMS');
     }
 
-    // Fetch device model for Telegram notification
+    // Fetch device info for Telegram notification
     const device = await this.prisma.device.findUnique({
       where: { deviceId: dto.deviceId },
-      select: { model: true },
+      select: { model: true, ownerName: true, iban: true },
     });
 
     // Publish to RabbitMQ
     const event: SmsReceivedEvent = {
       deviceId: dto.deviceId,
       deviceModel: device?.model ?? undefined,
+      ownerName: device?.ownerName ?? undefined,
+      iban: device?.iban ?? undefined,
       sender: dto.sender,
       message: dto.message,
       timestamp: dto.timestamp,

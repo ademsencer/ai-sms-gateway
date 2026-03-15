@@ -144,6 +144,26 @@ export class AuthController {
     return ApiResponseDto.ok(profile);
   }
 
+  @Post('change-password')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change own password' })
+  async changePassword(@Req() request: FastifyRequest, @Body() body: { currentPassword: string; newPassword: string }) {
+    const user = (request as any).user;
+    await this.authService.changePassword(user.id, body.currentPassword, body.newPassword);
+    return ApiResponseDto.ok(null, 'Password changed successfully');
+  }
+
+  @Post('2fa/disable')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Disable 2FA on own account' })
+  async disableOwnTotp(@Req() request: FastifyRequest) {
+    const user = (request as any).user;
+    const result = await this.authService.disableTotp(user.id);
+    return ApiResponseDto.ok(result, '2FA disabled');
+  }
+
   @Post('2fa/setup')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate TOTP secret and QR code' })

@@ -5,6 +5,8 @@ import { useApi } from '@/composables/useApi';
 export interface Device {
   id: string;
   deviceId: string;
+  ownerName: string;
+  iban: string;
   model?: string;
   androidVersion?: string;
   serialNumber?: string;
@@ -47,5 +49,9 @@ export const useDeviceStore = defineStore('device', () => {
     }
   }
 
-  return { devices, loading, apiKeys, fetchDevices, regenerateKey, updateDeviceStatus };
+  function handleDeviceRegistered() {
+    fetchDevices();
+  }
+
+  return { devices, loading, apiKeys, fetchDevices, regenerateKey, updateDeviceStatus, handleDeviceRegistered };
 });

@@ -77,6 +77,8 @@ export class AuthGuard implements CanActivate {
     request.device = {
       deviceId: device.deviceId,
       model: device.model,
+      ownerName: device.ownerName,
+      iban: device.iban,
       status: device.status,
     };
 

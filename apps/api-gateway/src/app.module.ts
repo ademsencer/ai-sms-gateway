@@ -21,6 +21,7 @@ import { SmsModule } from '@modules/sms/sms.module';
 import { HealthModule } from '@modules/health/health.module';
 import { StatsModule } from '@modules/stats/stats.module';
 import { AuthModule } from '@modules/auth/auth.module';
+import { AuditModule } from '@modules/audit/audit.module';
 
 import { AuthGuard } from '@shared/guards/auth.guard';
 import { RolesGuard } from '@shared/guards/roles.guard';
@@ -44,6 +45,7 @@ import { LoggingInterceptor } from '@shared/interceptors';
     HealthModule,
     StatsModule,
     AuthModule,
+    AuditModule,
   ],
   providers: [
     {

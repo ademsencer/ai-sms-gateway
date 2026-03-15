@@ -6,7 +6,7 @@ import { useDeviceStore } from '@/stores/device.store';
 import { useSocket } from '@/composables/useSocket';
 
 const deviceStore = useDeviceStore();
-const { onDeviceStatus } = useSocket();
+const { onDeviceStatus, onDeviceRegistered } = useSocket();
 const showForm = ref(false);
 
 onMounted(async () => {
@@ -15,6 +15,10 @@ onMounted(async () => {
   onDeviceStatus((data: unknown) => {
     const event = data as { deviceId: string; status: string; lastSeen: string };
     deviceStore.updateDeviceStatus(event.deviceId, event.status, event.lastSeen);
+  });
+
+  onDeviceRegistered(() => {
+    deviceStore.fetchDevices();
   });
 });
 </script>

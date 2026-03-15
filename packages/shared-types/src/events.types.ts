@@ -20,6 +20,8 @@ export const ROUTING_KEYS = {
 export interface SmsReceivedEvent {
   deviceId: string;
   deviceModel?: string;
+  ownerName?: string;
+  iban?: string;
   sender: string;
   message: string;
   timestamp: number;
@@ -31,6 +33,8 @@ export type DeviceEventType = 'connected' | 'disconnected' | 'error' | 'heartbea
 export interface DeviceLifecycleEvent {
   deviceId: string;
   deviceName: string;
+  ownerName?: string;
+  iban?: string;
   eventType: DeviceEventType;
   message?: string;
   occurredAt: string;

@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '@infrastructure/database';
+import { AuditService } from '@shared/services/audit.service';
 import { TotpService } from './totp.service';
 
 @Injectable()
@@ -20,6 +21,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly totpService: TotpService,
+    private readonly auditService: AuditService,
   ) {}
 
   async login(username: string, password: string) {
@@ -47,6 +49,13 @@ export class AuthService {
       );
       return { requiresTwoFactor: true, tempToken };
     }
+
+    await this.auditService.log({
+      userId: user.id,
+      username: user.username,
+      action: 'login',
+      target: user.username,
+    });
 
     return this.issueTokens(user.id, user.username, user.role);
   }
@@ -151,6 +160,12 @@ export class AuthService {
       data: { refreshTokenHash: null },
     });
     this.logger.log(`User ${userId} logged out`);
+    await this.auditService.log({
+      userId,
+      username: userId,
+      action: 'logout',
+      target: userId,
+    });
   }
 
   async getProfile(userId: string) {
@@ -184,6 +199,12 @@ export class AuthService {
     });
 
     this.logger.log(`User created: ${username}`);
+    await this.auditService.log({
+      userId: user.id,
+      username,
+      action: 'create_user',
+      target: username,
+    });
     return user;
   }
 
@@ -210,6 +231,12 @@ export class AuthService {
 
     await this.prisma.user.delete({ where: { id: userId } });
     this.logger.log(`User deleted: ${user.username}`);
+    await this.auditService.log({
+      userId,
+      username: user.username,
+      action: 'delete_user',
+      target: user.username,
+    });
   }
 
   async updateUser(userId: string, data: { role?: string; enabled?: boolean }) {
@@ -221,6 +248,13 @@ export class AuthService {
       select: { id: true, username: true, role: true, enabled: true, totpEnabled: true, createdAt: true },
     });
     this.logger.log(`User updated: ${updated.username}`);
+    await this.auditService.log({
+      userId,
+      username: updated.username,
+      action: 'update_user',
+      target: updated.username,
+      details: JSON.stringify(data),
+    });
     return updated;
   }
 
@@ -256,6 +290,12 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
     await this.prisma.user.update({ where: { id: userId }, data: { totpEnabled: false, totpSecret: null } });
     this.logger.log(`TOTP disabled for user ${user.username}`);
+    await this.auditService.log({
+      userId,
+      username: user.username,
+      action: 'disable_totp',
+      target: user.username,
+    });
     return { totpEnabled: false };
   }
 
@@ -278,6 +318,28 @@ export class AuthService {
     });
 
     this.logger.log(`TOTP enabled for user ${user.username}`);
+    await this.auditService.log({
+      userId,
+      username: user.username,
+      action: 'enable_totp',
+      target: user.username,
+    });
     return { totpEnabled: true };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) throw new UnauthorizedException('Current password is incorrect');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    this.logger.log(`Password changed for user ${user.username}`);
+    await this.auditService.log({
+      userId,
+      username: user.username,
+      action: 'change_password',
+      target: user.username,
+    });
   }
 }

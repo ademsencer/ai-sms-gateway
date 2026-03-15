@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 const WS_EVENTS = {
   SMS_RECEIVED: 'sms:received',
   DEVICE_STATUS: 'device:status',
+  DEVICE_REGISTERED: 'device:registered',
   STATS_UPDATE: 'stats:update',
 } as const;
 
@@ -33,6 +34,10 @@ export function useSocket() {
     socket?.on(WS_EVENTS.DEVICE_STATUS, handler);
   }
 
+  function onDeviceRegistered(handler: (data: unknown) => void) {
+    socket?.on(WS_EVENTS.DEVICE_REGISTERED, handler);
+  }
+
   function onStatsUpdate(handler: (data: unknown) => void) {
     socket?.on(WS_EVENTS.STATS_UPDATE, handler);
   }
@@ -46,5 +51,5 @@ export function useSocket() {
   onMounted(connect);
   onUnmounted(disconnect);
 
-  return { connected, onSmsReceived, onDeviceStatus, onStatsUpdate };
+  return { connected, onSmsReceived, onDeviceStatus, onDeviceRegistered, onStatsUpdate };
 }
