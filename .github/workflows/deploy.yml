@@ -56,6 +56,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
+    needs: build-apk
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
@@ -112,20 +113,25 @@ jobs:
 
             # Download latest APK from GitHub Release for dashboard serving
             mkdir -p "$DEPLOY_DIR/downloads"
-            curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
-              -H "Accept: application/octet-stream" \
-              "https://api.github.com/repos/${{ github.repository }}/releases/tags/latest" \
-              -o /dev/null 2>&1 || true
-            # Get the latest APK asset URL and download it
-            APK_URL=$(curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
-              "https://api.github.com/repos/${{ github.repository }}/releases/tags/latest" \
-              | grep -o '"browser_download_url": *"[^"]*latest\.apk"' \
-              | head -1 | cut -d'"' -f4) || true
-            if [ -n "$APK_URL" ]; then
+            RELEASE_JSON=$(curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/latest") || true
+            # Extract the asset download URL for sms-gateway-latest.apk
+            ASSET_URL=$(echo "$RELEASE_JSON" | python3 -c "
+            import sys, json
+            data = json.load(sys.stdin)
+            for asset in data.get('assets', []):
+                if asset['name'] == 'sms-gateway-latest.apk':
+                    print(asset['url'])
+                    break
+            " 2>/dev/null) || true
+            if [ -n "$ASSET_URL" ]; then
               curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
                 -H "Accept: application/octet-stream" \
-                "$APK_URL" -o "$DEPLOY_DIR/downloads/sms-gateway-latest.apk"
+                "$ASSET_URL" -o "$DEPLOY_DIR/downloads/sms-gateway-latest.apk"
               echo "APK downloaded to $DEPLOY_DIR/downloads/"
+              ls -lh "$DEPLOY_DIR/downloads/sms-gateway-latest.apk"
+            else
+              echo "WARNING: Could not find APK asset in release"
             fi
 
             # Verify
