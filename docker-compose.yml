@@ -191,6 +191,8 @@ services:
     restart: unless-stopped
     ports:
       - '${NGINX_PORT:-5173}:80'
+    volumes:
+      - ./downloads:/usr/share/nginx/downloads:ro
     depends_on:
       api-gateway:
         condition: service_healthy

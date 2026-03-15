@@ -33,6 +33,8 @@ jobs:
         run: |
           cp apps/android-client/app/build/outputs/apk/debug/app-debug.apk \
              sms-gateway-${{ steps.sha.outputs.short }}.apk
+          cp apps/android-client/app/build/outputs/apk/debug/app-debug.apk \
+             sms-gateway-latest.apk
 
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
@@ -45,7 +47,9 @@ jobs:
             **Download:** `sms-gateway-${{ steps.sha.outputs.short }}.apk`
 
             Built at: ${{ github.event.head_commit.timestamp }}
-          files: sms-gateway-${{ steps.sha.outputs.short }}.apk
+          files: |
+            sms-gateway-${{ steps.sha.outputs.short }}.apk
+            sms-gateway-latest.apk
           make_latest: true
           prerelease: false
         env:
@@ -105,6 +109,24 @@ jobs:
               echo "  attempt $i/30..."
               sleep 5
             done
+
+            # Download latest APK from GitHub Release for dashboard serving
+            mkdir -p "$DEPLOY_DIR/downloads"
+            curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
+              -H "Accept: application/octet-stream" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/latest" \
+              -o /dev/null 2>&1 || true
+            # Get the latest APK asset URL and download it
+            APK_URL=$(curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/latest" \
+              | grep -o '"browser_download_url": *"[^"]*latest\.apk"' \
+              | head -1 | cut -d'"' -f4) || true
+            if [ -n "$APK_URL" ]; then
+              curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
+                -H "Accept: application/octet-stream" \
+                "$APK_URL" -o "$DEPLOY_DIR/downloads/sms-gateway-latest.apk"
+              echo "APK downloaded to $DEPLOY_DIR/downloads/"
+            fi
 
             # Verify
             docker compose ps
