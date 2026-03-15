@@ -24,6 +24,20 @@ data class DeviceEventPayload(
     @SerializedName("message") val message: String? = null
 )
 
+data class RegisterDevicePayload(
+    @SerializedName("deviceId") val deviceId: String,
+    @SerializedName("name") val name: String,
+    @SerializedName("androidVersion") val androidVersion: String?,
+    @SerializedName("model") val model: String?,
+    @SerializedName("serialNumber") val serialNumber: String?
+)
+
+data class RegisterDeviceData(
+    @SerializedName("deviceId") val deviceId: String,
+    @SerializedName("name") val name: String,
+    @SerializedName("apiKey") val apiKey: String
+)
+
 data class ApiResponse<T>(
     @SerializedName("success") val success: Boolean,
     @SerializedName("data") val data: T?,
@@ -51,6 +65,11 @@ interface GatewayApiService {
         @Header("x-device-key") apiKey: String,
         @Body payload: DeviceEventPayload
     ): Response<ApiResponse<EventResult>>
+
+    @POST("api/device/register")
+    suspend fun registerDevice(
+        @Body payload: RegisterDevicePayload
+    ): Response<ApiResponse<RegisterDeviceData>>
 }
 
 object GatewayApi {

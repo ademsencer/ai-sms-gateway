@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class DeviceResponseDto {
   @ApiProperty()
@@ -9,6 +9,15 @@ export class DeviceResponseDto {
 
   @ApiProperty()
   name: string;
+
+  @ApiPropertyOptional()
+  androidVersion?: string;
+
+  @ApiPropertyOptional()
+  model?: string;
+
+  @ApiPropertyOptional()
+  serialNumber?: string;
 
   @ApiProperty()
   status: string;

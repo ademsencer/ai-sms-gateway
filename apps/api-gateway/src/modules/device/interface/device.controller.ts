@@ -40,6 +40,15 @@ export class DeviceController {
       return ApiResponseDto.fail<RegisterDeviceResponseDto>('Device already registered');
     }
 
+    // Check unique name
+    const nameExists = await this.prisma.device.findUnique({
+      where: { name: dto.name },
+    });
+
+    if (nameExists) {
+      return ApiResponseDto.fail<RegisterDeviceResponseDto>('A device with this name already exists');
+    }
+
     const apiKey = uuidv4();
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
 
@@ -48,10 +57,13 @@ export class DeviceController {
         deviceId: dto.deviceId,
         name: dto.name,
         apiKeyHash,
+        androidVersion: dto.androidVersion,
+        model: dto.model,
+        serialNumber: dto.serialNumber,
       },
     });
 
-    this.logger.log(`Device registered: ${dto.deviceId} (${dto.name})`);
+    this.logger.log(`Device registered: ${dto.deviceId} (${dto.name}) — model: ${dto.model}, android: ${dto.androidVersion}`);
 
     return ApiResponseDto.ok<RegisterDeviceResponseDto>(
       { deviceId: dto.deviceId, name: dto.name, apiKey },
@@ -130,6 +142,9 @@ export class DeviceController {
       id: d.id,
       deviceId: d.deviceId,
       name: d.name,
+      androidVersion: d.androidVersion ?? undefined,
+      model: d.model ?? undefined,
+      serialNumber: d.serialNumber ?? undefined,
       status: d.status,
       lastSeen: d.lastSeen.toISOString(),
       createdAt: d.createdAt.toISOString(),

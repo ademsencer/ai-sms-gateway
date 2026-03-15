@@ -54,7 +54,7 @@
                     android:id="@+id/tvStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="NOT CONFIGURED"
+                    android:text="NOT REGISTERED"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="#333333"
@@ -62,7 +62,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Configuration Card -->
+        <!-- Device Info Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -80,11 +80,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="API Configuration"
+                    android:text="Device Info"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
 
+                <!-- Device ID -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -99,16 +100,17 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:background="#EEEEEE"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginBottom="8dp">
 
                     <TextView
                         android:id="@+id/tvDeviceId"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:textColor="#333333"
-                        android:padding="12dp" />
+                        android:padding="12dp"
+                        android:fontFamily="monospace" />
 
                     <ImageButton
                         android:id="@+id/btnCopyDeviceId"
@@ -120,37 +122,102 @@
                         android:layout_marginEnd="4dp" />
                 </LinearLayout>
 
+                <!-- Device Model -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Model"
+                    android:textSize="12sp"
+                    android:textColor="#888888"
+                    android:layout_marginBottom="2dp" />
+
+                <TextView
+                    android:id="@+id/tvModel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="#333333"
+                    android:background="#EEEEEE"
+                    android:padding="12dp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Android Version -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Android Version"
+                    android:textSize="12sp"
+                    android:textColor="#888888"
+                    android:layout_marginBottom="2dp" />
+
+                <TextView
+                    android:id="@+id/tvAndroidVersion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="#333333"
+                    android:background="#EEEEEE"
+                    android:padding="12dp"
+                    android:layout_marginBottom="12dp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Registration Card (shown when not registered) -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardRegister"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Register Device"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="API Key"
+                    android:hint="Device Name (unique)"
                     android:layout_marginBottom="12dp"
                     xmlns:app="http://schemas.android.com/apk/res-auto"
-                    app:boxBackgroundMode="outline"
-                    app:endIconMode="password_toggle">
+                    app:boxBackgroundMode="outline">
 
                     <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etApiKey"
+                        android:id="@+id/etDeviceName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textPassword"
+                        android:inputType="text"
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <Button
-                    android:id="@+id/btnSave"
+                    android:id="@+id/btnRegister"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:text="Save Configuration"
+                    android:text="Register"
                     android:backgroundTint="#2563EB" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Controls -->
+        <!-- Controls (shown when registered) -->
         <LinearLayout
+            android:id="@+id/layoutControls"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <Button
                 android:id="@+id/btnStart"

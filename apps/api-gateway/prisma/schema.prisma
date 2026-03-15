@@ -8,19 +8,23 @@ datasource db {
 }
 
 model Device {
-  id         String   @id @default(uuid())
-  deviceId   String   @unique @map("device_id")
-  name       String
-  apiKeyHash String   @map("api_key_hash")
-  status     String   @default("online")
-  lastSeen   DateTime @default(now()) @map("last_seen")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  deviceId       String   @unique @map("device_id")
+  name           String   @unique
+  apiKeyHash     String   @map("api_key_hash")
+  androidVersion String?  @map("android_version")
+  model          String?
+  serialNumber   String?  @map("serial_number")
+  status         String   @default("online")
+  lastSeen       DateTime @default(now()) @map("last_seen")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   messages SmsMessage[]
 
   @@index([deviceId])
   @@index([status])
+  @@index([name])
   @@map("devices")
 }
 
