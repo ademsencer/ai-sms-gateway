@@ -1,12 +1,16 @@
 package com.smsgateway
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -46,6 +50,12 @@ class MainActivity : AppCompatActivity() {
         etApiKey.setText(prefs.apiKey)
 
         updateStatusDisplay()
+
+        findViewById<ImageButton>(R.id.btnCopyDeviceId).setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("Device ID", prefs.deviceId))
+            Toast.makeText(this, "Device ID copied", Toast.LENGTH_SHORT).show()
+        }
 
         btnSave.setOnClickListener { saveConfig() }
         btnStart.setOnClickListener { startService() }
