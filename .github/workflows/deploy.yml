@@ -96,7 +96,7 @@ jobs:
         working-directory: apps/android-client
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug -PVERSION_NAME=${{ needs.version.outputs.version }}
 
       - name: Get short SHA
         id: sha

@@ -3,9 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Read version from root VERSION file
+// Read version from monorepo root VERSION file
 val appVersionName: String = try {
-    rootProject.file("../VERSION").readText().trim()
+    rootProject.file("../../VERSION").readText().trim()
 } catch (_: Exception) {
     project.findProperty("VERSION_NAME") as? String ?: "1.0.0"
 }
