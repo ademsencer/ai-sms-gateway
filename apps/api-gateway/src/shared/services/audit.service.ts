@@ -31,4 +31,15 @@ export class AuditService {
     ]);
     return { data: logs, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
+
+  async deleteOne(id: string): Promise<void> {
+    await this.prisma.auditLog.delete({ where: { id } });
+    this.logger.log(`[AUDIT] Deleted audit log entry: ${id}`);
+  }
+
+  async deleteAll(): Promise<number> {
+    const result = await this.prisma.auditLog.deleteMany();
+    this.logger.log(`[AUDIT] Deleted all audit logs: ${result.count} entries`);
+    return result.count;
+  }
 }

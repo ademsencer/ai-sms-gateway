@@ -1,6 +1,6 @@
 {
   "name": "sms-gateway-enterprise",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "Enterprise Android SMS Gateway Platform — event-driven microservice architecture",
   "private": true,
   "license": "MIT",

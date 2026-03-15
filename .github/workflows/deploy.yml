@@ -5,7 +5,80 @@ on:
     branches: [main]
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      bump_type: ${{ steps.version.outputs.bump_type }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version bump
+        id: version
+        run: |
+          CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "Current version: $CURRENT_VERSION"
+
+          # Parse current version
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Analyze commit messages since last tag to determine bump type
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" 2>/dev/null || echo "")
+          else
+            COMMITS=$(git log --pretty=format:"%s" -10 2>/dev/null || echo "")
+          fi
+
+          BUMP="patch"
+
+          # Check for major indicators
+          if echo "$COMMITS" | grep -qiE '(BREAKING CHANGE|breaking:|major:)'; then
+            BUMP="major"
+          # Check for minor indicators (new features, significant additions)
+          elif echo "$COMMITS" | grep -qiE '(feat|feature|add |added|new |implement|support|enhance)'; then
+            BUMP="minor"
+          fi
+
+          # Apply bump
+          case $BUMP in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "Bump type: $BUMP"
+          echo "New version: $NEW_VERSION"
+
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "bump_type=$BUMP" >> $GITHUB_OUTPUT
+
+      - name: Update VERSION file
+        run: |
+          echo "${{ steps.version.outputs.version }}" > VERSION
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git diff --cached --quiet || git commit -m "chore: bump version to v${{ steps.version.outputs.version }}"
+          git push || true
+
   build-apk:
+    needs: version
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,24 +104,50 @@ jobs:
 
       - name: Rename APK
         run: |
+          VERSION="${{ needs.version.outputs.version }}"
           cp apps/android-client/app/build/outputs/apk/debug/app-debug.apk \
-             sms-gateway-${{ steps.sha.outputs.short }}.apk
+             sms-gateway-v${VERSION}.apk
           cp apps/android-client/app/build/outputs/apk/debug/app-debug.apk \
              sms-gateway-latest.apk
 
-      - name: Create/Update Release
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          BUMP="${{ needs.version.outputs.bump_type }}"
+          SHORT="${{ steps.sha.outputs.short }}"
+
+          # Get commit messages since last release
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            CHANGES=$(git log "$LAST_TAG"..HEAD --pretty=format:"- %s" --no-merges | head -20)
+          else
+            CHANGES=$(git log --pretty=format:"- %s" --no-merges -10)
+          fi
+
+          cat > release_notes.md << NOTES_EOF
+          ## SMS Gateway v${VERSION}
+
+          **Version:** ${VERSION} (${BUMP} release)
+          **Commit:** ${SHORT}
+          **Built at:** $(date -u '+%Y-%m-%d %H:%M UTC')
+
+          ### Changes
+          ${CHANGES}
+
+          ### Download
+          - \`sms-gateway-v${VERSION}.apk\` — versioned build
+          - \`sms-gateway-latest.apk\` — always latest
+          NOTES_EOF
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: "SMS Gateway - Latest Build"
-          body: |
-            Auto-built from commit ${{ github.sha }}
-
-            **Download:** `sms-gateway-${{ steps.sha.outputs.short }}.apk`
-
-            Built at: ${{ github.event.head_commit.timestamp }}
+          tag_name: v${{ needs.version.outputs.version }}
+          name: "SMS Gateway v${{ needs.version.outputs.version }}"
+          body_path: release_notes.md
           files: |
-            sms-gateway-${{ steps.sha.outputs.short }}.apk
+            sms-gateway-v${{ needs.version.outputs.version }}.apk
             sms-gateway-latest.apk
           make_latest: true
           prerelease: false
@@ -56,7 +155,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
-    needs: build-apk
+    needs: [version, build-apk]
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
@@ -69,6 +168,7 @@ jobs:
             set -e
 
             DEPLOY_DIR="/opt/sms-gateway"
+            VERSION="${{ needs.version.outputs.version }}"
 
             # First deploy: clone (private repo needs token)
             if [ ! -d "$DEPLOY_DIR" ]; then
@@ -114,7 +214,7 @@ jobs:
             # Download latest APK from GitHub Release for dashboard serving
             mkdir -p "$DEPLOY_DIR/downloads"
             RELEASE_JSON=$(curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
-              "https://api.github.com/repos/${{ github.repository }}/releases/tags/latest") || true
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${VERSION}") || true
             # Extract the asset download URL for sms-gateway-latest.apk
             ASSET_URL=$(echo "$RELEASE_JSON" | python3 -c "
             import sys, json
@@ -128,12 +228,12 @@ jobs:
               curl -sL -H "Authorization: token ${{ secrets.GH_PAT }}" \
                 -H "Accept: application/octet-stream" \
                 "$ASSET_URL" -o "$DEPLOY_DIR/downloads/sms-gateway-latest.apk"
-              echo "APK downloaded to $DEPLOY_DIR/downloads/"
+              echo "APK v${VERSION} downloaded to $DEPLOY_DIR/downloads/"
               ls -lh "$DEPLOY_DIR/downloads/sms-gateway-latest.apk"
             else
-              echo "WARNING: Could not find APK asset in release"
+              echo "WARNING: Could not find APK asset in release v${VERSION}"
             fi
 
             # Verify
             docker compose ps
-            echo "Deploy completed at $(date)"
+            echo "Deploy v${VERSION} completed at $(date)"
