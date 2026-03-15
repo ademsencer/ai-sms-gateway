@@ -205,8 +205,8 @@ onMounted(fetchUsers);
       </form>
     </div>
 
-    <!-- Users Table -->
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <!-- Users Table (Desktop) -->
+    <div class="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div v-if="loading" class="p-8 text-center text-gray-500 text-sm">Loading users...</div>
       <table v-else class="w-full">
         <thead>
@@ -283,13 +283,77 @@ onMounted(fetchUsers);
       </table>
     </div>
 
+    <!-- Users Cards (Mobile) -->
+    <div class="md:hidden space-y-3">
+      <div v-if="loading" class="p-8 text-center text-gray-500 text-sm">Loading users...</div>
+      <div v-else-if="users.length === 0" class="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500 text-sm">No users found</div>
+      <div v-for="u in users" :key="u.id" class="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-gray-900">{{ u.username }}</span>
+          <button
+            @click="toggleRole(u)"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors"
+            :class="u.role === 'admin' ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'"
+          >
+            {{ u.role }}
+          </button>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-500">2FA:</span>
+              <button
+                v-if="u.totpEnabled"
+                @click="disable2fa(u.id)"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer"
+              >Enabled</button>
+              <button
+                v-else
+                @click="setup2fa(u.id)"
+                :disabled="setup2faLoading"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 cursor-pointer disabled:opacity-50"
+              >Setup</button>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-500">Active:</span>
+              <button
+                @click="toggleEnabled(u)"
+                class="relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200"
+                :class="u.enabled ? 'bg-green-500' : 'bg-gray-300'"
+              >
+                <span
+                  class="pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow transition duration-200"
+                  :class="u.enabled ? 'translate-x-3' : 'translate-x-0'"
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+          <span class="text-[11px] text-gray-400">{{ formatDate(u.createdAt) }}</span>
+          <template v-if="deleteConfirmId === u.id">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-500">Delete?</span>
+              <button @click="deleteUser(u.id)" class="text-red-600 text-xs font-medium">Yes</button>
+              <button @click="deleteConfirmId = null" class="text-gray-500 text-xs font-medium">No</button>
+            </div>
+          </template>
+          <button
+            v-else
+            @click="deleteConfirmId = u.id"
+            class="text-red-500 hover:text-red-700 text-xs font-medium"
+          >Delete</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 2FA QR Modal -->
     <div v-if="show2faModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="show2faModal = false">
       <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Setup Two-Factor Authentication</h3>
         <p class="text-sm text-gray-600 mb-4">Scan this QR code with Google Authenticator or a compatible app.</p>
         <div class="flex justify-center mb-4">
-          <img :src="qrCodeUrl" alt="QR Code" class="w-48 h-48" />
+          <img :src="qrCodeUrl" alt="QR Code" class="w-36 h-36 sm:w-48 sm:h-48" />
         </div>
         <div class="mb-4">
           <label class="block text-xs font-medium text-gray-500 mb-1">Manual Entry Secret</label>

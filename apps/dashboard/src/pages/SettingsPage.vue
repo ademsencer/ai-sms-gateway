@@ -100,7 +100,7 @@ async function handleEnable2fa() {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
+    <h1 class="text-xl sm:text-2xl font-bold text-gray-800 mb-6">Settings</h1>
 
     <div v-if="error" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
       {{ error }}
@@ -141,14 +141,14 @@ async function handleEnable2fa() {
         <div class="p-4 bg-gray-50 rounded-lg">
           <p class="text-sm text-gray-600 mb-3">Scan this QR code with your authenticator app:</p>
           <div class="flex justify-center mb-3">
-            <img :src="qrCodeDataUrl" alt="2FA QR Code" class="w-48 h-48" />
+            <img :src="qrCodeDataUrl" alt="2FA QR Code" class="w-36 h-36 sm:w-48 sm:h-48" />
           </div>
           <p class="text-xs text-gray-500 text-center">
             Or enter this secret manually: <code class="bg-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">{{ setupSecret }}</code>
           </p>
         </div>
 
-        <form @submit.prevent="handleEnable2fa" class="flex items-end gap-3">
+        <form @submit.prevent="handleEnable2fa" class="flex flex-col sm:flex-row sm:items-end gap-3">
           <div class="flex-1">
             <label class="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
             <input

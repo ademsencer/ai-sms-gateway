@@ -3,12 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Read version from monorepo root VERSION file
-val appVersionName: String = try {
-    rootProject.file("../../VERSION").readText().trim()
-} catch (_: Exception) {
-    project.findProperty("VERSION_NAME") as? String ?: "1.0.0"
-}
+// CI passes -PVERSION_NAME with the bumped version; prefer that over the local file
+val appVersionName: String = (project.findProperty("VERSION_NAME") as? String)
+    ?: try {
+        rootProject.file("../../VERSION").readText().trim()
+    } catch (_: Exception) {
+        "1.0.0"
+    }
 val appVersionCode: Int = try {
     val parts = appVersionName.split(".")
     parts[0].toInt() * 10000 + parts[1].toInt() * 100 + parts[2].toInt()

@@ -193,8 +193,8 @@ watch(filterAction, () => {
 
     <!-- Filters -->
     <div class="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="flex-1 min-w-[200px]">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="flex-1 min-w-0">
           <input
             v-model="filterSearch"
             type="text"
@@ -227,8 +227,8 @@ watch(filterAction, () => {
       @cancel="showClearConfirm = false"
     />
 
-    <!-- Table -->
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <!-- Table (Desktop) -->
+    <div class="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div v-if="loading" class="p-12 text-center">
         <div class="inline-flex items-center gap-2 text-gray-400 text-sm">
           <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
@@ -320,6 +320,76 @@ watch(filterAction, () => {
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Audit Log Cards (Mobile) -->
+    <div class="md:hidden space-y-3">
+      <div v-if="loading" class="p-8 text-center">
+        <div class="inline-flex items-center gap-2 text-gray-400 text-sm">
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          Loading...
+        </div>
+      </div>
+      <div v-else-if="logs.length === 0" class="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+        <p class="text-sm text-gray-400">No audit logs found</p>
+      </div>
+      <div
+        v-for="log in logs"
+        :key="log.id"
+        class="bg-white rounded-xl border border-gray-200 p-4 space-y-2"
+        @click="log.details ? toggleRow(log.id) : null"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium" :class="actionColor(log.action)">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="actionIcon(log.action)" /></svg>
+            {{ log.action }}
+          </span>
+          <div class="text-right flex-shrink-0">
+            <div class="text-[11px] text-gray-500 tabular-nums">{{ formatRelative(log.createdAt) }}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-gray-500">User:</span>
+          <span class="font-medium text-gray-900">{{ log.username }}</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-gray-500">Target:</span>
+          <span class="font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded text-[11px] break-all">{{ log.target }}</span>
+        </div>
+        <div class="text-[10px] text-gray-400 tabular-nums">{{ formatDate(log.createdAt) }}</div>
+        <!-- Expanded details -->
+        <div v-if="expandedRow === log.id && log.details" class="pt-2 border-t border-gray-100">
+          <template v-if="isJsonDetails(log.details)">
+            <div class="space-y-1.5 max-h-48 overflow-y-auto">
+              <div v-for="(val, key) in getJsonData(log.details)" :key="key" class="flex flex-col">
+                <span class="text-[10px] font-medium text-gray-500">{{ formatKey(String(key)) }}</span>
+                <span class="text-[11px] text-gray-800 font-mono break-all">{{ formatValue(val) }}</span>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <p class="text-xs text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">{{ log.details }}</p>
+          </template>
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <button
+            v-if="log.details"
+            @click.stop="toggleRow(log.id)"
+            class="text-[11px] text-blue-600"
+          >
+            {{ expandedRow === log.id ? 'Hide details' : 'View details' }}
+          </button>
+          <span v-else></span>
+          <button
+            @click.stop="deleteEntry(log.id)"
+            :disabled="deleting === log.id"
+            class="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 disabled:opacity-50"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          </button>
+        </div>
       </div>
     </div>
 
