@@ -1,4 +1,4 @@
-import { Controller, Get, Req } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Public } from '@shared/decorators/public.decorator';
 import { PrismaService } from '@infrastructure/database';
@@ -10,6 +10,7 @@ import * as path from 'path';
 @Controller('health')
 export class HealthController {
   private readonly version: string;
+  private readonly publicUrl: string;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -22,12 +23,14 @@ export class HealthController {
     } catch {
       this.version = '0.0.0';
     }
+
+    this.publicUrl = process.env.PUBLIC_URL || '';
   }
 
   @Get()
   @Public()
   @ApiOperation({ summary: 'Health check', description: 'Returns service health status.' })
-  async check(@Req() req: any): Promise<{
+  async check(): Promise<{
     status: string;
     version: string;
     apkUrl: string;
@@ -54,10 +57,8 @@ export class HealthController {
 
     const allHealthy = Object.values(services).every((s) => s === 'healthy');
 
-    // Build APK download URL from request origin
-    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const host = req.headers['x-forwarded-host'] || req.headers['host'] || 'localhost';
-    const apkUrl = `${proto}://${host}/downloads/sms-gateway-latest.apk`;
+    const base = this.publicUrl.replace(/\/+$/, '');
+    const apkUrl = base ? `${base}/downloads/sms-gateway-latest.apk` : '';
 
     return {
       status: allHealthy ? 'healthy' : 'degraded',

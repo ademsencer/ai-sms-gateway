@@ -98,6 +98,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
       - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-false}
+      - PUBLIC_URL=${PUBLIC_URL:-}
     depends_on:
       mysql:
         condition: service_healthy
