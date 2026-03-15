@@ -1,6 +1,7 @@
 package com.smsgateway
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -56,13 +57,19 @@ class MainActivity : AppCompatActivity() {
         btnStart.setOnClickListener { startGatewayService() }
         btnStop.setOnClickListener { stopGatewayService() }
 
-        requestPermissions()
+        checkAndRequestPermissions()
         updateUI()
 
         // Auto-start service if previously enabled and configured
         if (prefs.serviceEnabled && prefs.isConfigured) {
             startGatewayService()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Re-check permissions when returning from Settings
+        updateUI()
     }
 
     override fun onDestroy() {
@@ -129,6 +136,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // Check SMS permissions before starting
+        if (!hasSmsPermissions()) {
+            showPermissionRequiredDialog()
+            return
+        }
+
         // Request battery optimization exemption (critical for TECNO, Xiaomi, etc.)
         requestBatteryOptimizationExemption()
 
@@ -164,7 +177,7 @@ class MainActivity : AppCompatActivity() {
             // Some devices may not support this intent
             Toast.makeText(
                 this,
-                "Please disable battery optimization for this app manually in Settings",
+                "Lütfen pil optimizasyonunu bu uygulama için manuel olarak kapatın",
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -199,7 +212,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun requestPermissions() {
+    // ─── Permission Handling ───────────────────────────────────────────
+
+    private fun hasSmsPermissions(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED &&
+               ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * On Android 13+ (API 33), sideloaded APKs have "restricted settings" enabled.
+     * SMS permissions are blocked until the user manually allows restricted settings
+     * from the app info page: Settings → Apps → SMS Gateway → ⋮ → Allow restricted settings
+     */
+    private fun checkAndRequestPermissions() {
         val permissions = mutableListOf(
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.READ_SMS,
@@ -214,6 +239,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (needed.isNotEmpty()) {
+            // First try the normal permission request flow
             ActivityCompat.requestPermissions(this, needed.toTypedArray(), permissionRequestCode)
         }
     }
@@ -225,12 +251,109 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == permissionRequestCode) {
-            val denied = permissions.zip(grantResults.toTypedArray())
-                .filter { it.second != PackageManager.PERMISSION_GRANTED }
-                .map { it.first }
+            val smsPermissionDenied = permissions.zip(grantResults.toTypedArray())
+                .any { (perm, result) ->
+                    (perm == Manifest.permission.RECEIVE_SMS || perm == Manifest.permission.READ_SMS) &&
+                    result != PackageManager.PERMISSION_GRANTED
+                }
 
-            if (denied.isNotEmpty()) {
-                Toast.makeText(this, "SMS permissions required for the gateway to work", Toast.LENGTH_LONG).show()
+            if (smsPermissionDenied) {
+                // On Android 13+, sideloaded apps need "Allow restricted settings" first
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    showRestrictedSettingsDialog()
+                } else {
+                    showManualPermissionDialog()
+                }
+            }
+        }
+    }
+
+    /**
+     * Android 13+ restricted settings dialog.
+     * Guides the user to enable restricted settings for sideloaded apps.
+     */
+    private fun showRestrictedSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Kısıtlı Ayarlar Gerekli")
+            .setMessage(
+                "Bu uygulama Play Store dışından yüklendiği için Android, SMS izinlerini kısıtlamıştır.\n\n" +
+                "İzin vermek için:\n\n" +
+                "1. Açılan sayfada sağ üstteki ⋮ menüsüne dokunun\n" +
+                "2. \"Kısıtlı ayarlara izin ver\" seçeneğine dokunun\n" +
+                "3. Geri gelip izinleri tekrar verin\n\n" +
+                "Bu işlem sadece bir kez gereklidir."
+            )
+            .setPositiveButton("Ayarlara Git") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("Sonra") { dialog, _ ->
+                dialog.dismiss()
+                Toast.makeText(
+                    this,
+                    "SMS izinleri olmadan uygulama çalışamaz",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    /**
+     * Fallback dialog for older Android versions where permission was denied.
+     */
+    private fun showManualPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("SMS İzni Gerekli")
+            .setMessage(
+                "SMS izinleri reddedildi. Uygulama ayarlarından izinleri manuel olarak vermeniz gerekiyor.\n\n" +
+                "Ayarlar → İzinler → SMS izinlerini açın."
+            )
+            .setPositiveButton("Ayarlara Git") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("İptal") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    /**
+     * Dialog shown when user tries to start service without SMS permissions.
+     */
+    private fun showPermissionRequiredDialog() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !hasSmsPermissions() &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECEIVE_SMS)
+        ) {
+            // On Android 13+, if rationale is not shown, it means restricted settings
+            showRestrictedSettingsDialog()
+        } else {
+            // Try requesting again
+            checkAndRequestPermissions()
+        }
+    }
+
+    /**
+     * Opens the app's detail settings page.
+     * From here, users can:
+     * - Allow restricted settings (⋮ menu on Android 13+)
+     * - Manually grant SMS permissions
+     * - Disable battery optimization
+     */
+    private fun openAppSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback: open general app settings
+            try {
+                startActivity(Intent(Settings.ACTION_APPLICATION_SETTINGS))
+            } catch (e2: Exception) {
+                Toast.makeText(this, "Ayarlar açılamadı, lütfen manuel olarak açın", Toast.LENGTH_LONG).show()
             }
         }
     }
